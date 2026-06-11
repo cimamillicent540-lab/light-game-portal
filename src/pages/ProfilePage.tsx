@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { ReferralStats, UserProfile, UserWallet } from '../auth/AuthContext';
 import { formatDateTime, formatDuration, formatScoreValue } from '../lib/scoreFormat';
 import { supabase } from '../lib/supabase';
+import { getVipWorldCupMultiplier } from '../lib/worldCup';
 
 type UserScoreRow = {
   id: string;
@@ -70,6 +71,7 @@ export function ProfilePage({
     () => (profile?.referral_code ? `${referralBaseUrl}?ref=${profile.referral_code}` : ''),
     [profile?.referral_code],
   );
+  const worldCupMultiplier = getVipWorldCupMultiplier(profile?.vip_level);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setCountdown(getCountdownToNextDay()), 1000);
@@ -227,6 +229,10 @@ export function ProfilePage({
           <div className="profile-field balance">
             <span>金币余额</span>
             <strong>{wallet?.balance ?? 0}</strong>
+          </div>
+          <div className="profile-field">
+            <span>世界杯VIP加成</span>
+            <strong>{worldCupMultiplier}x</strong>
           </div>
         </div>
 

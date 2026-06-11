@@ -17,6 +17,7 @@
 - 用户中心展示资料、VIP、金币钱包
 - 每日签到奖励金币
 - 邀请码、邀请链接和邀请奖励统计
+- World Cup Prediction Challenge 2026 活动页面、预测大厅、排行榜、历史记录和规则页
 
 ## 项目结构
 
@@ -48,7 +49,13 @@
 │   ├── pages
 │   │   ├── LoginPage.tsx
 │   │   ├── ProfilePage.tsx
-│   │   └── RegisterPage.tsx
+│   │   ├── RegisterPage.tsx
+│   │   └── world-cup
+│   │       ├── WorldCupHistoryPage.tsx
+│   │       ├── WorldCupHomePage.tsx
+│   │       ├── WorldCupLeaderboardPage.tsx
+│   │       ├── WorldCupPredictionsPage.tsx
+│   │       └── WorldCupRulesPage.tsx
 │   ├── styles.css
 │   └── types.ts
 ├── supabase
@@ -161,6 +168,14 @@ Supabase 后台需要检查：
 ```text
 supabase/migrations/20260611_daily_checkin_reward_20.sql
 ```
+
+世界杯活动 V1 数据库迁移在：
+
+```text
+supabase/migrations/20260611_world_cup_prediction_v1.sql
+```
+
+该迁移新增 `wc_markets`、`wc_predictions`、`wc_user_stats`、`event_config` 等表，并新增 `wc_place_prediction()`、`wc_get_leaderboard()`、`wc_use_ai_assistant()` 等函数。竞猜扣金币必须走 `spend_coins()`，派奖必须走 `add_coins()`。
 
 配套说明在 `docs/supabase-database.md`，包括：
 

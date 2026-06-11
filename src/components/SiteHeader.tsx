@@ -7,6 +7,7 @@ type SiteHeaderProps = {
   onLogout: () => void;
   onProfile: () => void;
   onRegister: () => void;
+  onWorldCup: () => void;
 };
 
 const formatEmail = (email: string) => {
@@ -27,6 +28,7 @@ export function SiteHeader({
   onLogout,
   onProfile,
   onRegister,
+  onWorldCup,
 }: SiteHeaderProps) {
   return (
     <header className="site-header">
@@ -45,6 +47,9 @@ export function SiteHeader({
         </button>
         <button className="nav-button" type="button" onClick={onLeaderboard}>
           排行榜
+        </button>
+        <button className="nav-button" type="button" onClick={onWorldCup}>
+          World Cup
         </button>
         {userEmail ? (
           <>

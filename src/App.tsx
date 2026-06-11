@@ -7,6 +7,11 @@ import { LoginPage } from './pages/LoginPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
+import { WorldCupHistoryPage } from './pages/world-cup/WorldCupHistoryPage';
+import { WorldCupHomePage } from './pages/world-cup/WorldCupHomePage';
+import { WorldCupLeaderboardPage } from './pages/world-cup/WorldCupLeaderboardPage';
+import { WorldCupPredictionsPage } from './pages/world-cup/WorldCupPredictionsPage';
+import { WorldCupRulesPage } from './pages/world-cup/WorldCupRulesPage';
 
 type Route =
   | { name: 'home' }
@@ -15,7 +20,12 @@ type Route =
   | { name: 'leaderboard'; gameId?: string }
   | { name: 'login' }
   | { name: 'register' }
-  | { name: 'profile' };
+  | { name: 'profile' }
+  | { name: 'worldCup' }
+  | { name: 'worldCupPredictions' }
+  | { name: 'worldCupLeaderboard' }
+  | { name: 'worldCupHistory' }
+  | { name: 'worldCupRules' };
 
 const routeToPath = (route: Route) => {
   if (route.name === 'home') {
@@ -28,6 +38,26 @@ const routeToPath = (route: Route) => {
 
   if (route.name === 'leaderboard') {
     return route.gameId ? `/leaderboard?game=${route.gameId}` : '/leaderboard';
+  }
+
+  if (route.name === 'worldCup') {
+    return '/world-cup';
+  }
+
+  if (route.name === 'worldCupPredictions') {
+    return '/world-cup/predictions';
+  }
+
+  if (route.name === 'worldCupLeaderboard') {
+    return '/world-cup/leaderboard';
+  }
+
+  if (route.name === 'worldCupHistory') {
+    return '/world-cup/history';
+  }
+
+  if (route.name === 'worldCupRules') {
+    return '/world-cup/rules';
   }
 
   return `/${route.name}`;
@@ -69,6 +99,26 @@ const parseRoute = (): Route => {
 
   if (path === '/profile') {
     return { name: 'profile' };
+  }
+
+  if (path === '/world-cup') {
+    return { name: 'worldCup' };
+  }
+
+  if (path === '/world-cup/predictions') {
+    return { name: 'worldCupPredictions' };
+  }
+
+  if (path === '/world-cup/leaderboard') {
+    return { name: 'worldCupLeaderboard' };
+  }
+
+  if (path === '/world-cup/history') {
+    return { name: 'worldCupHistory' };
+  }
+
+  if (path === '/world-cup/rules') {
+    return { name: 'worldCupRules' };
   }
 
   const gameMatch = path.match(/^\/games\/([^/]+)$/);
@@ -124,6 +174,10 @@ export function App() {
     if (!isLoading && route.name === 'profile' && !user) {
       navigate({ name: 'login' }, { replace: true });
     }
+
+    if (!isLoading && route.name === 'worldCupHistory' && !user) {
+      navigate({ name: 'login' }, { replace: true });
+    }
   }, [isLoading, route.name, user]);
 
   const activeGame = useMemo(
@@ -149,6 +203,7 @@ export function App() {
         onLogout={handleLogout}
         onProfile={() => navigate({ name: 'profile' })}
         onRegister={() => navigate({ name: 'register' })}
+        onWorldCup={() => navigate({ name: 'worldCup' })}
       />
 
       <main>
@@ -196,6 +251,24 @@ export function App() {
             onSelectGame={(gameId) => navigate({ name: 'leaderboard', gameId })}
             onPlay={(gameId) => navigate({ name: 'game', gameId })}
           />
+        ) : route.name === 'worldCup' ? (
+          <WorldCupHomePage
+            onPredictions={() => navigate({ name: 'worldCupPredictions' })}
+            onLeaderboard={() => navigate({ name: 'worldCupLeaderboard' })}
+            onHistory={() => navigate({ name: 'worldCupHistory' })}
+            onRules={() => navigate({ name: 'worldCupRules' })}
+          />
+        ) : route.name === 'worldCupPredictions' ? (
+          <WorldCupPredictionsPage
+            onLogin={() => navigate({ name: 'login' })}
+            onLeaderboard={() => navigate({ name: 'worldCupLeaderboard' })}
+          />
+        ) : route.name === 'worldCupLeaderboard' ? (
+          <WorldCupLeaderboardPage />
+        ) : route.name === 'worldCupHistory' ? (
+          user ? <WorldCupHistoryPage /> : null
+        ) : route.name === 'worldCupRules' ? (
+          <WorldCupRulesPage />
         ) : route.name === 'games' ? (
           <section className="library-page">
             <div className="page-heading">
@@ -244,6 +317,13 @@ export function App() {
                     onClick={() => navigate({ name: 'leaderboard' })}
                   >
                     查看排行榜
+                  </button>
+                  <button
+                    className="hero-button secondary"
+                    type="button"
+                    onClick={() => navigate({ name: 'worldCup' })}
+                  >
+                    世界杯活动
                   </button>
                 </div>
               </div>
