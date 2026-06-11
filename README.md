@@ -132,3 +132,14 @@ Supabase 后台需要检查：
 - Authentication > URL Configuration 中设置 Site URL 为线上域名。
 - Redirect URLs 加入线上域名和本地开发地址，例如 `http://localhost:5173/*`。
 - 如果开启 Confirm email，注册后用户需要先完成邮箱确认再登录。
+
+## Supabase 数据库
+
+长期运营用的数据库结构在 `supabase/schema.sql`，可以直接复制到 Supabase SQL Editor 执行。
+
+配套说明在 `docs/supabase-database.md`，包括：
+
+- 哪些表前端可以读取
+- 哪些写操作必须走数据库函数或后端接口
+- PayPal / Netlify Functions 后续接入方式
+- 哪些环境变量不能暴露到前端
