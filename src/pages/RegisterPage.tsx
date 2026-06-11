@@ -6,6 +6,7 @@ type RegisterPageProps = {
 };
 
 export function RegisterPage({ onLogin }: RegisterPageProps) {
+  const referralCode = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() ?? '';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,6 +33,13 @@ export function RegisterPage({ onLogin }: RegisterPageProps) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: referralCode
+        ? {
+            data: {
+              referral_code: referralCode,
+            },
+          }
+        : undefined,
     });
     setIsSubmitting(false);
 
@@ -56,6 +64,8 @@ export function RegisterPage({ onLogin }: RegisterPageProps) {
         <p className="eyebrow">Create account</p>
         <h1>注册</h1>
         <p className="auth-copy">先创建基础账号，后续可接入云端成绩、个人资料和排行榜。</p>
+
+        {referralCode ? <p className="form-message success">已使用邀请码：{referralCode}</p> : null}
 
         {!isSupabaseConfigured ? (
           <p className="form-message error">请先配置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY。</p>

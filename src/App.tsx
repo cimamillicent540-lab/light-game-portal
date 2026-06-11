@@ -71,8 +71,10 @@ const parseRoute = (): Route => {
 export function App() {
   const {
     user,
+    session,
     profile,
     wallet,
+    referralStats,
     isLoading,
     isAccountLoading,
     accountError,
@@ -162,8 +164,10 @@ export function App() {
           ) : user ? (
             <ProfilePage
               user={user}
+              accessToken={session?.access_token ?? null}
               profile={profile}
               wallet={wallet}
+              referralStats={referralStats}
               isAccountLoading={isAccountLoading}
               accountError={accountError}
               onRefresh={refreshAccountData}

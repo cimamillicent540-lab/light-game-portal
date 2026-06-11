@@ -1,6 +1,6 @@
 # Light Game Portal
 
-一个可长期迭代的轻量小游戏平台。项目使用 React + Vite + TypeScript，只包含前端静态页面，适合直接部署到 Netlify。
+一个可长期迭代的轻量小游戏平台。项目使用 React + Vite + TypeScript，前端静态页面部署在 Netlify，并用 Supabase 承载登录、钱包和长期运营数据。
 
 ## 当前功能
 
@@ -13,6 +13,10 @@
 - 显示本次反应时间
 - 记录当前页面会话内的最好成绩
 - 手机和桌面端自适应布局
+- Supabase 邮箱密码注册、登录、退出
+- 用户中心展示资料、VIP、金币钱包
+- 每日签到奖励金币
+- 邀请码、邀请链接和邀请奖励统计
 
 ## 项目结构
 
@@ -20,6 +24,9 @@
 .
 ├── index.html
 ├── netlify.toml
+├── netlify
+│   └── functions
+│       └── grant-referral-reward.mts
 ├── package.json
 ├── public
 │   └── portal-symbol.svg
@@ -38,8 +45,16 @@
 │   │   └── reaction
 │   │       └── ReactionGame.tsx
 │   ├── main.tsx
+│   ├── pages
+│   │   ├── LoginPage.tsx
+│   │   ├── ProfilePage.tsx
+│   │   └── RegisterPage.tsx
 │   ├── styles.css
 │   └── types.ts
+├── supabase
+│   ├── migrations
+│   │   └── 20260611_daily_checkin_reward_20.sql
+│   └── schema.sql
 ├── tsconfig.app.json
 ├── tsconfig.json
 ├── tsconfig.node.json
@@ -94,9 +109,10 @@ Netlify 还需要配置以下环境变量：
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
-只使用 Supabase anon public / publishable key，不要在前端或 Netlify 环境变量里放 `service_role` key。
+`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`SUPABASE_SERVICE_ROLE_KEY` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。
 
 ### 方式二：Netlify CLI
 
@@ -125,6 +141,9 @@ netlify deploy --prod
 - `/login` 邮箱密码登录
 - `/profile` 用户中心，未登录会跳转到 `/login`
 - 导航栏会根据登录状态显示 Login/Register 或 Profile/Logout
+- `/profile` 中可以每日签到，调用数据库函数 `daily_checkin()`
+- `/profile` 中显示邀请码、邀请链接、邀请人数和累计奖励
+- 新用户通过 `/register?ref=邀请码` 注册时，会把邀请码写入 Supabase Auth metadata，由数据库注册触发器绑定邀请关系
 
 Supabase 后台需要检查：
 
@@ -137,9 +156,21 @@ Supabase 后台需要检查：
 
 长期运营用的数据库结构在 `supabase/schema.sql`，可以直接复制到 Supabase SQL Editor 执行。
 
+如果数据库已经安装过基础 schema，本次每日签到奖励改为 20 金币的增量 SQL 在：
+
+```text
+supabase/migrations/20260611_daily_checkin_reward_20.sql
+```
+
 配套说明在 `docs/supabase-database.md`，包括：
 
 - 哪些表前端可以读取
 - 哪些写操作必须走数据库函数或后端接口
 - PayPal / Netlify Functions 后续接入方式
 - 哪些环境变量不能暴露到前端
+
+## 签到和邀请奖励
+
+- 每日签到由前端调用 `daily_checkin()`，金币余额会通过数据库函数安全更新。
+- 邀请奖励由 `netlify/functions/grant-referral-reward.mts` 验证当前登录用户后，用服务端 `SUPABASE_SERVICE_ROLE_KEY` 调用 `grant_referral_reward()`。
+- 前端不能直接修改 `wallets.balance`、`coin_transactions`、`vip_memberships` 或支付订单状态。

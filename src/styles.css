@@ -256,6 +256,14 @@ p {
   font-weight: 700;
 }
 
+.section-heading.compact h2 {
+  font-size: clamp(1.25rem, 4vw, 1.55rem);
+}
+
+.section-heading.compact span {
+  font-size: 0.92rem;
+}
+
 .text-button {
   color: #2c6df6;
   background: transparent;
@@ -760,6 +768,48 @@ p {
   font-size: clamp(1.6rem, 5vw, 2.6rem);
 }
 
+.profile-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  border: 1px solid rgba(39, 65, 105, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.profile-note {
+  margin: 0;
+  color: #667085;
+  font-weight: 800;
+}
+
+.referral-link {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-radius: 8px;
+  background: #eef5ff;
+  padding: 16px;
+}
+
+.referral-link span {
+  color: #667085;
+  font-weight: 900;
+}
+
+.referral-link strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #202433;
+  line-height: 1.5;
+}
+
+.copy-button {
+  width: fit-content;
+  min-height: 44px;
+}
+
 .profile-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -838,5 +888,13 @@ p {
 
   .profile-actions {
     grid-template-columns: 1fr;
+  }
+
+  .profile-section {
+    padding: 16px;
+  }
+
+  .copy-button {
+    width: 100%;
   }
 }

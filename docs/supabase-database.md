@@ -40,10 +40,10 @@ Use database functions or trusted backend endpoints for those operations.
 
 ## Required Function Flow
 
-- `daily_checkin()` gives the current authenticated user one daily reward.
+- `daily_checkin()` gives the current authenticated user one 20-coin daily reward.
 - `submit_game_score()` records the current authenticated user's score.
 - `add_coins()` and `spend_coins()` are for trusted service-role backend calls or internal DB functions.
-- `grant_referral_reward()` is for trusted backend or post-signup reward processing.
+- `grant_referral_reward()` is called by `netlify/functions/grant-referral-reward.mts` after the invited user logs in.
 - `activate_vip()` is for trusted backend calls after payment is captured.
 
 ## PayPal / Netlify Functions Plan
@@ -64,6 +64,10 @@ Safe for Vite frontend:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+
+Required for Netlify Functions:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 Never expose these to the frontend or commit them to GitHub:
 

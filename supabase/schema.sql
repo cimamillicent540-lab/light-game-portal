@@ -177,11 +177,14 @@ create table if not exists public.daily_checkins (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references public.profiles(id) on delete cascade,
   checkin_date date not null,
-  reward_amount integer default 10,
+  reward_amount integer default 20,
   streak_count integer default 1,
   created_at timestamptz default now(),
   unique(user_id, checkin_date)
 );
+
+alter table public.daily_checkins
+  alter column reward_amount set default 20;
 
 create index if not exists daily_checkins_user_date_idx
   on public.daily_checkins(user_id, checkin_date desc);
@@ -572,7 +575,7 @@ declare
   today date := current_date;
   previous_streak integer := 0;
   next_streak integer := 1;
-  reward integer := 10;
+  reward integer := 20;
   new_balance integer;
 begin
   if current_user_id is null then

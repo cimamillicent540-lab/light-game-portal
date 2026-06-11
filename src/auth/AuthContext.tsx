@@ -6,10 +6,16 @@ import { supabase } from '../lib/supabase';
 export type UserProfile = {
   username: string | null;
   vip_level: string | null;
+  referral_code: string | null;
 };
 
 export type UserWallet = {
   balance: number;
+};
+
+export type ReferralStats = {
+  inviteCount: number;
+  totalRewarded: number;
 };
 
 type AuthContextValue = {
@@ -17,6 +23,7 @@ type AuthContextValue = {
   user: User | null;
   profile: UserProfile | null;
   wallet: UserWallet | null;
+  referralStats: ReferralStats;
   isLoading: boolean;
   isAccountLoading: boolean;
   accountError: string;
@@ -34,6 +41,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [wallet, setWallet] = useState<UserWallet | null>(null);
+  const [referralStats, setReferralStats] = useState<ReferralStats>({
+    inviteCount: 0,
+    totalRewarded: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isAccountLoading, setIsAccountLoading] = useState(false);
   const [accountError, setAccountError] = useState('');
@@ -42,6 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!supabase) {
       setProfile(null);
       setWallet(null);
+      setReferralStats({ inviteCount: 0, totalRewarded: 0 });
       setAccountError('Supabase 环境变量尚未配置。');
       return;
     }
@@ -52,7 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [profileResult, walletResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('username, vip_level')
+        .select('username, vip_level, referral_code')
         .eq('id', userId)
         .maybeSingle(),
       supabase
@@ -76,6 +88,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setWallet(null);
     } else {
       setWallet(walletResult.data);
+    }
+
+    const referralResult = await supabase
+      .from('referral_rewards')
+      .select('reward_amount, status')
+      .eq('referrer_id', userId);
+
+    if (referralResult.error) {
+      setAccountError((currentError) =>
+        currentError ? `${currentError}; ${referralResult.error.message}` : referralResult.error.message,
+      );
+      setReferralStats({ inviteCount: 0, totalRewarded: 0 });
+    } else {
+      const rows = referralResult.data ?? [];
+      setReferralStats({
+        inviteCount: rows.length,
+        totalRewarded: rows
+          .filter((row) => row.status === 'rewarded')
+          .reduce((total, row) => total + (row.reward_amount ?? 0), 0),
+      });
     }
 
     setIsAccountLoading(false);
@@ -115,6 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!session?.user) {
       setProfile(null);
       setWallet(null);
+      setReferralStats({ inviteCount: 0, totalRewarded: 0 });
       setAccountError('');
       setIsAccountLoading(false);
       return;
@@ -129,6 +162,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user: session?.user ?? null,
       profile,
       wallet,
+      referralStats,
       isLoading,
       isAccountLoading,
       accountError,
@@ -140,6 +174,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signOut: async () => {
         if (!supabase) {
           setSession(null);
+          setProfile(null);
+          setWallet(null);
+          setReferralStats({ inviteCount: 0, totalRewarded: 0 });
           return;
         }
 
@@ -151,9 +188,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(null);
         setProfile(null);
         setWallet(null);
+        setReferralStats({ inviteCount: 0, totalRewarded: 0 });
       },
     }),
-    [accountError, isAccountLoading, isLoading, profile, session, wallet],
+    [accountError, isAccountLoading, isLoading, profile, referralStats, session, wallet],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
