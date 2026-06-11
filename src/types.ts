@@ -6,7 +6,11 @@ export type GameEntry = {
   id: string;
   title: string;
   tagline: string;
+  description: string;
+  category: string;
+  difficulty: '轻松' | '中等';
+  duration: string;
   accent: string;
   status: GameStatus;
-  component?: ComponentType;
+  component: ComponentType;
 };

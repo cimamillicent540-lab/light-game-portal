@@ -13,8 +13,6 @@ const statusLabel = {
 };
 
 export function GameCard({ game, onPlay }: GameCardProps) {
-  const isPlayable = Boolean(game.component);
-
   return (
     <article className="game-card" style={{ '--accent': game.accent } as CSSProperties}>
       <div className="game-card-visual" aria-hidden="true">
@@ -23,11 +21,16 @@ export function GameCard({ game, onPlay }: GameCardProps) {
       <div className="game-card-body">
         <div className="game-card-topline">
           <span className="status-pill">{statusLabel[game.status]}</span>
+          <span className="meta-pill">{game.category}</span>
         </div>
         <h3>{game.title}</h3>
         <p>{game.tagline}</p>
+        <div className="game-meta">
+          <span>{game.difficulty}</span>
+          <span>{game.duration}</span>
+        </div>
       </div>
-      <button className="primary-button" type="button" onClick={onPlay} disabled={!isPlayable}>
+      <button className="primary-button" type="button" onClick={onPlay}>
         开始玩
       </button>
     </article>

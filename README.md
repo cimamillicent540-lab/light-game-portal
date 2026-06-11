@@ -1,11 +1,14 @@
 # Light Game Portal
 
-一个可长期迭代的轻量小游戏网站。第一版使用 React + Vite + TypeScript，只包含前端静态页面，适合直接部署到 Netlify。
+一个可长期迭代的轻量小游戏平台。项目使用 React + Vite + TypeScript，只包含前端静态页面，适合直接部署到 Netlify。
 
 ## 当前功能
 
 - 首页游戏门户
+- 独立游戏列表页
+- 2048
 - 点击反应速度测试
+- 记忆翻牌
 - 随机等待 1-3 秒后进入可点击状态
 - 显示本次反应时间
 - 记录当前页面会话内的最好成绩
@@ -28,6 +31,10 @@
 │   ├── data
 │   │   └── games.ts
 │   ├── games
+│   │   ├── 2048
+│   │   │   └── Game2048.tsx
+│   │   ├── memory
+│   │   │   └── MemoryGame.tsx
 │   │   └── reaction
 │   │       └── ReactionGame.tsx
 │   ├── main.tsx
@@ -39,7 +46,11 @@
 └── vite.config.ts
 ```
 
-以后新增小游戏时，建议在 `src/games/<game-id>/` 下创建独立组件，并在 `src/data/games.ts` 里注册入口信息。
+以后新增小游戏时，建议：
+
+1. 在 `src/games/<game-id>/` 下创建独立组件。
+2. 在 `src/data/games.ts` 中注册游戏标题、分类、难度、时长、颜色和组件。
+3. 游戏内部只管理自己的局部状态；跨游戏的用户、成绩、排行榜后续再接 Supabase。
 
 ## 本地开发
 
@@ -89,3 +100,4 @@ netlify deploy --prod
 - 增加更多小游戏
 - 增加分享卡片和排行榜页面
 - 增加音效、动效和主题切换
+- 接入 Supabase 用户系统、云端成绩和排行榜
