@@ -10,6 +10,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { WorldCupHistoryPage } from './pages/world-cup/WorldCupHistoryPage';
 import { WorldCupHomePage } from './pages/world-cup/WorldCupHomePage';
 import { WorldCupLeaderboardPage } from './pages/world-cup/WorldCupLeaderboardPage';
+import { WorldCupMatchesPage } from './pages/world-cup/WorldCupMatchesPage';
 import { WorldCupPredictionsPage } from './pages/world-cup/WorldCupPredictionsPage';
 import { WorldCupRulesPage } from './pages/world-cup/WorldCupRulesPage';
 
@@ -22,9 +23,10 @@ type Route =
   | { name: 'register' }
   | { name: 'profile' }
   | { name: 'worldCup' }
-  | { name: 'worldCupPredictions' }
+  | { name: 'worldCupPredictions'; marketSlug?: string }
   | { name: 'worldCupLeaderboard' }
   | { name: 'worldCupHistory' }
+  | { name: 'worldCupMatches' }
   | { name: 'worldCupRules' };
 
 const routeToPath = (route: Route) => {
@@ -45,7 +47,7 @@ const routeToPath = (route: Route) => {
   }
 
   if (route.name === 'worldCupPredictions') {
-    return '/world-cup/predictions';
+    return route.marketSlug ? `/world-cup/predictions?market=${route.marketSlug}` : '/world-cup/predictions';
   }
 
   if (route.name === 'worldCupLeaderboard') {
@@ -54,6 +56,10 @@ const routeToPath = (route: Route) => {
 
   if (route.name === 'worldCupHistory') {
     return '/world-cup/history';
+  }
+
+  if (route.name === 'worldCupMatches') {
+    return '/world-cup/matches';
   }
 
   if (route.name === 'worldCupRules') {
@@ -106,7 +112,8 @@ const parseRoute = (): Route => {
   }
 
   if (path === '/world-cup/predictions') {
-    return { name: 'worldCupPredictions' };
+    const marketSlug = new URLSearchParams(window.location.search).get('market') ?? undefined;
+    return { name: 'worldCupPredictions', marketSlug };
   }
 
   if (path === '/world-cup/leaderboard') {
@@ -115,6 +122,10 @@ const parseRoute = (): Route => {
 
   if (path === '/world-cup/history') {
     return { name: 'worldCupHistory' };
+  }
+
+  if (path === '/world-cup/matches') {
+    return { name: 'worldCupMatches' };
   }
 
   if (path === '/world-cup/rules') {
@@ -253,13 +264,15 @@ export function App() {
           />
         ) : route.name === 'worldCup' ? (
           <WorldCupHomePage
-            onPredictions={() => navigate({ name: 'worldCupPredictions' })}
+            onPredictions={(marketSlug) => navigate({ name: 'worldCupPredictions', marketSlug })}
             onLeaderboard={() => navigate({ name: 'worldCupLeaderboard' })}
             onHistory={() => navigate({ name: 'worldCupHistory' })}
+            onMatches={() => navigate({ name: 'worldCupMatches' })}
             onRules={() => navigate({ name: 'worldCupRules' })}
           />
         ) : route.name === 'worldCupPredictions' ? (
           <WorldCupPredictionsPage
+            initialMarketSlug={route.marketSlug}
             onLogin={() => navigate({ name: 'login' })}
             onLeaderboard={() => navigate({ name: 'worldCupLeaderboard' })}
           />
@@ -267,6 +280,10 @@ export function App() {
           <WorldCupLeaderboardPage />
         ) : route.name === 'worldCupHistory' ? (
           user ? <WorldCupHistoryPage /> : null
+        ) : route.name === 'worldCupMatches' ? (
+          <WorldCupMatchesPage
+            onPredictions={(marketSlug) => navigate({ name: 'worldCupPredictions', marketSlug })}
+          />
         ) : route.name === 'worldCupRules' ? (
           <WorldCupRulesPage />
         ) : route.name === 'games' ? (

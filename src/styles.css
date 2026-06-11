@@ -768,7 +768,8 @@ p {
   gap: 16px;
 }
 
-.market-card {
+.market-card,
+.match-card {
   display: grid;
   gap: 14px;
   min-width: 0;
@@ -779,11 +780,13 @@ p {
   box-shadow: 0 12px 28px rgba(36, 73, 132, 0.07);
 }
 
-.market-card h3 {
+.market-card h3,
+.match-card h3 {
   margin: 0;
 }
 
-.market-card p {
+.market-card p,
+.match-card p {
   margin: 0;
   color: #667085;
   line-height: 1.55;

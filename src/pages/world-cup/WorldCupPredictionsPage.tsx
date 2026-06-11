@@ -11,6 +11,7 @@ import {
 } from '../../lib/worldCup';
 
 type WorldCupPredictionsPageProps = {
+  initialMarketSlug?: string;
   onLogin: () => void;
   onLeaderboard: () => void;
 };
@@ -30,7 +31,7 @@ const buildAnalysis = (market: WorldCupMarket) => [
   '风险提示：该分析只提供概率和信息整理，不构成下注建议，也不保证结果。',
 ];
 
-export function WorldCupPredictionsPage({ onLogin, onLeaderboard }: WorldCupPredictionsPageProps) {
+export function WorldCupPredictionsPage({ initialMarketSlug, onLogin, onLeaderboard }: WorldCupPredictionsPageProps) {
   const { user, profile, wallet, refreshAccountData } = useAuth();
   const [markets, setMarkets] = useState<WorldCupMarket[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -57,11 +58,13 @@ export function WorldCupPredictionsPage({ onLogin, onLeaderboard }: WorldCupPred
 
   const groupedMarkets = useMemo(
     () =>
-      markets.reduce<Record<string, WorldCupMarket[]>>((groups, market) => {
+      markets
+        .filter((market) => !initialMarketSlug || market.slug === initialMarketSlug)
+        .reduce<Record<string, WorldCupMarket[]>>((groups, market) => {
         groups[market.market_type] = [...(groups[market.market_type] ?? []), market];
         return groups;
       }, {}),
-    [markets],
+    [initialMarketSlug, markets],
   );
 
   const handleSubmit = async (market: WorldCupMarket) => {

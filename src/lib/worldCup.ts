@@ -65,6 +65,22 @@ export type WorldCupLeaderboardRow = {
   best_streak: number;
 };
 
+export type WorldCupMatch = {
+  id: string;
+  group_name: string;
+  team_home: string;
+  team_away: string;
+  kickoff_time: string;
+  status: 'scheduled' | 'live' | 'finished';
+  home_score: number | null;
+  away_score: number | null;
+  winner: string | null;
+  market_slug: string | null;
+  market_status: string | null;
+  locks_at: string | null;
+  prediction_count: number;
+};
+
 export const worldCupEventStart = new Date('2026-06-11T00:00:00Z');
 export const worldCupEventEnd = new Date('2026-07-22T23:59:59Z');
 
@@ -113,6 +129,38 @@ export const getWorldCupMarkets = async () => {
     ...market,
     options: Array.isArray(market.options) ? market.options : [],
   })) as WorldCupMarket[];
+};
+
+export const getWorldCupMatches = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase.rpc('wc_get_recent_matches', {
+    p_limit: 50,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as WorldCupMatch[];
+};
+
+export const getTodayWorldCupMatches = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase.rpc('wc_get_recent_matches', {
+    p_limit: 10,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as WorldCupMatch[];
 };
 
 export const placeWorldCupPrediction = async (marketSlug: string, selectedOption: string) => {
@@ -200,4 +248,17 @@ export const getEventCountdown = (target: Date) => {
   const hours = Math.floor((diff % 86_400_000) / 3_600_000);
   const minutes = Math.floor((diff % 3_600_000) / 60_000);
   return `${days}天 ${hours}小时 ${minutes}分`;
+};
+
+export const getMatchCountdown = (kickoffTime: string) => {
+  const kickoff = new Date(kickoffTime).getTime();
+  const diff = kickoff - Date.now();
+
+  if (diff <= 0) {
+    return '已开赛';
+  }
+
+  const hours = Math.floor(diff / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  return hours >= 24 ? `${Math.floor(hours / 24)}天 ${hours % 24}小时` : `${hours}小时 ${minutes}分`;
 };

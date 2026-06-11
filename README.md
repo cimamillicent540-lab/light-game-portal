@@ -175,6 +175,24 @@ supabase/migrations/20260611_daily_checkin_reward_20.sql
 supabase/migrations/20260611_world_cup_prediction_v1.sql
 ```
 
+赛程系统迁移在：
+
+```text
+supabase/migrations/20260611_world_cup_matches.sql
+```
+
+管理员导入赛程 CSV 可使用：
+
+```bash
+node --experimental-strip-types scripts/import-worldcup-matches.ts matches.csv output.sql
+```
+
+CSV 字段：
+
+```text
+group_name,team_home,team_away,kickoff_time
+```
+
 该迁移新增 `wc_markets`、`wc_predictions`、`wc_user_stats`、`event_config` 等表，并新增 `wc_place_prediction()`、`wc_get_leaderboard()`、`wc_use_ai_assistant()` 等函数。竞猜扣金币必须走 `spend_coins()`，派奖必须走 `add_coins()`。
 
 配套说明在 `docs/supabase-database.md`，包括：
