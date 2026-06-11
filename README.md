@@ -56,6 +56,12 @@
 
 建议使用 Node.js 22，与 `netlify.toml` 中的 Netlify 构建环境保持一致。
 
+复制环境变量示例文件，并填入 Supabase 前端公开配置：
+
+```bash
+cp .env.example .env.local
+```
+
 ```bash
 npm install
 npm run dev
@@ -83,6 +89,15 @@ npm run build
 
 本项目已经包含 `netlify.toml`，Netlify 通常会自动读取这些配置。
 
+Netlify 还需要配置以下环境变量：
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+只使用 Supabase anon public / publishable key，不要在前端或 Netlify 环境变量里放 `service_role` key。
+
 ### 方式二：Netlify CLI
 
 ```bash
@@ -101,3 +116,19 @@ netlify deploy --prod
 - 增加分享卡片和排行榜页面
 - 增加音效、动效和主题切换
 - 接入 Supabase 用户系统、云端成绩和排行榜
+
+## Auth 功能
+
+当前已接入 Supabase Auth：
+
+- `/register` 邮箱密码注册
+- `/login` 邮箱密码登录
+- `/profile` 用户中心，未登录会跳转到 `/login`
+- 导航栏会根据登录状态显示 Login/Register 或 Profile/Logout
+
+Supabase 后台需要检查：
+
+- Authentication > Providers 中启用 Email。
+- Authentication > URL Configuration 中设置 Site URL 为线上域名。
+- Redirect URLs 加入线上域名和本地开发地址，例如 `http://localhost:5173/*`。
+- 如果开启 Confirm email，注册后用户需要先完成邮箱确认再登录。
