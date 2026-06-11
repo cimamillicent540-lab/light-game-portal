@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { ReferralStats, UserProfile, UserWallet } from '../auth/AuthContext';
 import { formatDateTime, formatDuration, formatScoreValue } from '../lib/scoreFormat';
 import { supabase } from '../lib/supabase';
-import { getVipWorldCupMultiplier } from '../lib/worldCup';
+import { getMyWorldCupEconomyStats, getVipWorldCupMultiplier, type WorldCupEconomyStats } from '../lib/worldCup';
 
 type UserScoreRow = {
   id: string;
@@ -66,6 +66,8 @@ export function ProfilePage({
   const [recentScores, setRecentScores] = useState<UserScoreRow[]>([]);
   const [bestScores, setBestScores] = useState<UserScoreRow[]>([]);
   const [scoreError, setScoreError] = useState('');
+  const [worldCupStats, setWorldCupStats] = useState<WorldCupEconomyStats | null>(null);
+  const [worldCupStatsError, setWorldCupStatsError] = useState('');
   const [countdown, setCountdown] = useState(getCountdownToNextDay);
   const referralLink = useMemo(
     () => (profile?.referral_code ? `${referralBaseUrl}?ref=${profile.referral_code}` : ''),
@@ -166,6 +168,12 @@ export function ProfilePage({
         window.localStorage.removeItem(storageKey);
       });
   }, [accessToken, onRefresh, user.id]);
+
+  useEffect(() => {
+    getMyWorldCupEconomyStats()
+      .then(setWorldCupStats)
+      .catch((error: Error) => setWorldCupStatsError(error.message));
+  }, [user.id, wallet?.balance]);
 
   const handleDailyCheckin = async () => {
     if (!supabase || hasCheckedInToday || isCheckingIn) {
@@ -324,6 +332,52 @@ export function ProfilePage({
               ) : (
                 <p className="empty-state">完成一局游戏后会出现在这里。</p>
               )}
+            </div>
+          </div>
+        </div>
+
+        <div className="profile-section">
+          <div className="section-heading compact">
+            <h2>世界杯资产面板</h2>
+            <span>{worldCupStats?.is_highlighted ? '🔥 HOT 已开启' : '活动资产'}</span>
+          </div>
+          {worldCupStatsError ? <p className="form-message error">{worldCupStatsError}</p> : null}
+          <div className="profile-grid compact-profile-grid">
+            <div className="profile-field">
+              <span>竞猜次数</span>
+              <strong>{worldCupStats?.total_predictions ?? 0}</strong>
+            </div>
+            <div className="profile-field">
+              <span>正确次数</span>
+              <strong>{worldCupStats?.correct_predictions ?? 0}</strong>
+            </div>
+            <div className="profile-field">
+              <span>正确率</span>
+              <strong>{worldCupStats?.accuracy_rate ?? 0}%</strong>
+            </div>
+            <div className="profile-field balance">
+              <span>累计收益</span>
+              <strong>{worldCupStats?.profit ?? 0}</strong>
+            </div>
+            <div className="profile-field">
+              <span>累计消耗</span>
+              <strong>{worldCupStats?.coins_spent ?? 0}</strong>
+            </div>
+            <div className="profile-field">
+              <span>当前排名</span>
+              <strong>{worldCupStats?.current_rank ? `#${worldCupStats.current_rank}` : '--'}</strong>
+            </div>
+            <div className="profile-field">
+              <span>头像框</span>
+              <strong>{worldCupStats?.world_cup_avatar_frame ?? '未拥有'}</strong>
+            </div>
+            <div className="profile-field">
+              <span>高亮到期</span>
+              <strong>
+                {worldCupStats?.leaderboard_highlight_expires_at
+                  ? formatDateTime(worldCupStats.leaderboard_highlight_expires_at)
+                  : '--'}
+              </strong>
             </div>
           </div>
         </div>

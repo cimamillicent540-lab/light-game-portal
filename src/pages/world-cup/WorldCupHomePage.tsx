@@ -17,9 +17,17 @@ type WorldCupHomePageProps = {
   onHistory: () => void;
   onMatches: () => void;
   onRules: () => void;
+  onShop: () => void;
 };
 
-export function WorldCupHomePage({ onPredictions, onLeaderboard, onHistory, onMatches, onRules }: WorldCupHomePageProps) {
+export function WorldCupHomePage({
+  onPredictions,
+  onLeaderboard,
+  onHistory,
+  onMatches,
+  onRules,
+  onShop,
+}: WorldCupHomePageProps) {
   const [summary, setSummary] = useState<WorldCupSummary | null>(null);
   const [matches, setMatches] = useState<WorldCupMatch[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
@@ -72,6 +80,9 @@ export function WorldCupHomePage({ onPredictions, onLeaderboard, onHistory, onMa
             </button>
             <button className="hero-button secondary" type="button" onClick={onRules}>
               活动规则
+            </button>
+            <button className="hero-button secondary" type="button" onClick={onShop}>
+              世界杯商城
             </button>
           </div>
         </div>

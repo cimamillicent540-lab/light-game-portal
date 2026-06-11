@@ -63,6 +63,7 @@ export type WorldCupLeaderboardRow = {
   profit: number;
   current_streak: number;
   best_streak: number;
+  is_highlighted: boolean;
 };
 
 export type WorldCupMatch = {
@@ -79,6 +80,41 @@ export type WorldCupMatch = {
   market_status: string | null;
   locks_at: string | null;
   prediction_count: number;
+};
+
+export type WorldCupShopItem = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  category: 'avatar_frame' | 'leaderboard_highlight' | 'ai_ticket' | 'cosmetic';
+  price: number;
+  duration_days: number | null;
+  metadata: Record<string, unknown>;
+};
+
+export type WorldCupShopPurchase = {
+  id: string;
+  price_paid: number;
+  created_at: string;
+  shop_items: {
+    slug: string;
+    name: string;
+    category: string;
+  } | null;
+};
+
+export type WorldCupEconomyStats = {
+  total_predictions: number;
+  correct_predictions: number;
+  accuracy_rate: number;
+  coins_won: number;
+  coins_spent: number;
+  profit: number;
+  current_rank: number | null;
+  world_cup_avatar_frame: string | null;
+  leaderboard_highlight_expires_at: string | null;
+  is_highlighted: boolean;
 };
 
 export const worldCupEventStart = new Date('2026-06-11T00:00:00Z');
@@ -185,20 +221,46 @@ export const placeWorldCupPrediction = async (marketSlug: string, selectedOption
   };
 };
 
-export const useWorldCupAiAssistant = async (marketSlug?: string) => {
+export const useWorldCupAiAssistant = async (market: {
+  slug?: string;
+  title?: string;
+  marketType?: string;
+  options?: string[];
+  locksAt?: string;
+}) => {
   if (!supabase) {
     throw new Error('Supabase 环境变量尚未配置。');
   }
 
-  const { data, error } = await supabase.rpc('wc_use_ai_assistant', {
-    p_market_slug: marketSlug ?? null,
-  });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (error) {
-    throw error;
+  if (!session?.access_token) {
+    throw new Error('login required');
   }
 
-  return data as { coins_spent: number; vip_free: boolean };
+  const response = await fetch('/.netlify/functions/world-cup-ai-analysis', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      marketSlug: market.slug,
+      marketTitle: market.title,
+      marketType: market.marketType,
+      options: market.options,
+      locksAt: market.locksAt,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? 'AI 分析生成失败');
+  }
+
+  return data as { analysis: string; coins_spent: number; vip_free: boolean };
 };
 
 export const getWorldCupLeaderboard = async (period: 'today' | 'week' | 'all') => {
@@ -232,6 +294,72 @@ export const getMyWorldCupPredictions = async () => {
   }
 
   return (data ?? []) as unknown as WorldCupPrediction[];
+};
+
+export const getWorldCupShopItems = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase
+    .from('shop_items')
+    .select('id, slug, name, description, category, price, duration_days, metadata')
+    .eq('is_active', true)
+    .order('price', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as WorldCupShopItem[];
+};
+
+export const getWorldCupShopPurchases = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase
+    .from('shop_purchases')
+    .select('id, price_paid, created_at, shop_items(slug, name, category)')
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as unknown as WorldCupShopPurchase[];
+};
+
+export const purchaseWorldCupShopItem = async (itemSlug: string) => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase.rpc('wc_purchase_shop_item', {
+    p_item_slug: itemSlug,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data as { purchase_id: string; item_slug: string; price_paid: number; balance: number };
+};
+
+export const getMyWorldCupEconomyStats = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase.rpc('wc_get_my_economy_stats');
+
+  if (error) {
+    throw error;
+  }
+
+  return data as WorldCupEconomyStats;
 };
 
 export const formatWorldCupDate = (value: string) =>

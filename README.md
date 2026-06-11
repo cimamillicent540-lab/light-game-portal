@@ -117,9 +117,11 @@ Netlify 还需要配置以下环境变量：
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
+OPENAI_API_KEY
+OPENAI_MODEL
 ```
 
-`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`SUPABASE_SERVICE_ROLE_KEY` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。
+`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`SUPABASE_SERVICE_ROLE_KEY` 和 `OPENAI_API_KEY` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。
 
 ### 方式二：Netlify CLI
 
@@ -179,6 +181,12 @@ supabase/migrations/20260611_world_cup_prediction_v1.sql
 
 ```text
 supabase/migrations/20260611_world_cup_matches.sql
+```
+
+世界杯经济系统迁移在：
+
+```text
+supabase/migrations/20260612_world_cup_economy.sql
 ```
 
 管理员导入赛程 CSV 可使用：

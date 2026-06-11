@@ -68,7 +68,9 @@ export function WorldCupLeaderboardPage() {
           rows.map((row) => (
             <div className="wc-leaderboard-row" key={row.user_id}>
               <strong>#{row.rank}</strong>
-              <span>{row.username}</span>
+              <span>
+                {row.username} {row.is_highlighted ? '🔥 HOT' : ''}
+              </span>
               <span>{row.vip_level ?? 'free'}</span>
               <span>{row.accuracy_rate}%</span>
               <span>{row.current_streak}</span>

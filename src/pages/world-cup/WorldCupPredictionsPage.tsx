@@ -24,20 +24,13 @@ const marketTypeLabel: Record<WorldCupMarket['market_type'], string> = {
   special: '特别竞猜',
 };
 
-const buildAnalysis = (market: WorldCupMarket) => [
-  `${market.title} 当前属于「${marketTypeLabel[market.market_type]}」类型，锁定时间为 ${formatWorldCupDate(market.locks_at)}。`,
-  `基础奖励为 ${market.reward_amount} 金币，参与成本为 ${market.entry_cost} 金币。请注意奖励和风险并存。`,
-  `可选项数量为 ${market.options.length}，选项越多，不确定性通常越高。`,
-  '风险提示：该分析只提供概率和信息整理，不构成下注建议，也不保证结果。',
-];
-
 export function WorldCupPredictionsPage({ initialMarketSlug, onLogin, onLeaderboard }: WorldCupPredictionsPageProps) {
   const { user, profile, wallet, refreshAccountData } = useAuth();
   const [markets, setMarkets] = useState<WorldCupMarket[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [analysis, setAnalysis] = useState<{ title: string; lines: string[]; cost: number } | null>(null);
+  const [analysis, setAnalysis] = useState<{ title: string; text: string; cost: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingSlug, setPendingSlug] = useState('');
 
@@ -108,11 +101,17 @@ export function WorldCupPredictionsPage({ initialMarketSlug, onLogin, onLeaderbo
     setErrorMessage('');
 
     try {
-      const usage = await useWorldCupAiAssistant(market.slug);
+      const usage = await useWorldCupAiAssistant({
+        slug: market.slug,
+        title: market.title,
+        marketType: market.market_type,
+        options: market.options,
+        locksAt: market.locks_at,
+      });
       await refreshAccountData();
       setAnalysis({
         title: market.title,
-        lines: buildAnalysis(market),
+        text: usage.analysis,
         cost: usage.coins_spent,
       });
     } catch (error) {
@@ -142,9 +141,7 @@ export function WorldCupPredictionsPage({ initialMarketSlug, onLogin, onLeaderbo
             <span>{analysis.cost ? `消耗 ${analysis.cost} 金币` : '本次免费'}</span>
           </div>
           <h3>{analysis.title}</h3>
-          {analysis.lines.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
+          <p>{analysis.text}</p>
         </div>
       ) : null}
 

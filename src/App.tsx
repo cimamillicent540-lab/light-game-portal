@@ -13,6 +13,7 @@ import { WorldCupLeaderboardPage } from './pages/world-cup/WorldCupLeaderboardPa
 import { WorldCupMatchesPage } from './pages/world-cup/WorldCupMatchesPage';
 import { WorldCupPredictionsPage } from './pages/world-cup/WorldCupPredictionsPage';
 import { WorldCupRulesPage } from './pages/world-cup/WorldCupRulesPage';
+import { WorldCupShopPage } from './pages/world-cup/WorldCupShopPage';
 
 type Route =
   | { name: 'home' }
@@ -27,7 +28,8 @@ type Route =
   | { name: 'worldCupLeaderboard' }
   | { name: 'worldCupHistory' }
   | { name: 'worldCupMatches' }
-  | { name: 'worldCupRules' };
+  | { name: 'worldCupRules' }
+  | { name: 'worldCupShop' };
 
 const routeToPath = (route: Route) => {
   if (route.name === 'home') {
@@ -64,6 +66,10 @@ const routeToPath = (route: Route) => {
 
   if (route.name === 'worldCupRules') {
     return '/world-cup/rules';
+  }
+
+  if (route.name === 'worldCupShop') {
+    return '/world-cup/shop';
   }
 
   return `/${route.name}`;
@@ -130,6 +136,10 @@ const parseRoute = (): Route => {
 
   if (path === '/world-cup/rules') {
     return { name: 'worldCupRules' };
+  }
+
+  if (path === '/world-cup/shop') {
+    return { name: 'worldCupShop' };
   }
 
   const gameMatch = path.match(/^\/games\/([^/]+)$/);
@@ -269,6 +279,7 @@ export function App() {
             onHistory={() => navigate({ name: 'worldCupHistory' })}
             onMatches={() => navigate({ name: 'worldCupMatches' })}
             onRules={() => navigate({ name: 'worldCupRules' })}
+            onShop={() => navigate({ name: 'worldCupShop' })}
           />
         ) : route.name === 'worldCupPredictions' ? (
           <WorldCupPredictionsPage
@@ -286,6 +297,8 @@ export function App() {
           />
         ) : route.name === 'worldCupRules' ? (
           <WorldCupRulesPage />
+        ) : route.name === 'worldCupShop' ? (
+          <WorldCupShopPage onLogin={() => navigate({ name: 'login' })} />
         ) : route.name === 'games' ? (
           <section className="library-page">
             <div className="page-heading">
