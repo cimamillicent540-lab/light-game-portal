@@ -113,6 +113,7 @@ main {
 .home-page,
 .game-page,
 .library-page,
+.leaderboard-page,
 .auth-page,
 .profile-page {
   display: grid;
@@ -244,6 +245,7 @@ p {
   align-items: end;
   justify-content: space-between;
   gap: 18px;
+  flex-wrap: wrap;
 }
 
 .section-heading h2 {
@@ -290,6 +292,10 @@ p {
   line-height: 1.7;
 }
 
+.page-action {
+  margin-top: 12px;
+}
+
 .game-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -311,6 +317,20 @@ p {
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 18px 42px rgba(36, 73, 132, 0.08);
+}
+
+.game-card-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+
+.game-card-actions .primary-button,
+.game-card-actions .ghost-button {
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
 }
 
 .game-card-visual {
@@ -403,6 +423,13 @@ p {
   opacity: 0.55;
 }
 
+.compact-button {
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 18px;
+}
+
 .game-title-block {
   padding-top: 12px;
 }
@@ -422,7 +449,7 @@ p {
 
 .game-toolbar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 160px)) auto;
+  grid-template-columns: repeat(3, minmax(0, 150px)) auto;
   align-items: stretch;
   gap: 12px;
 }
@@ -645,6 +672,95 @@ p {
   font-weight: 900;
 }
 
+.score-submit-panel {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 620px);
+  border: 1px solid rgba(39, 65, 105, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 12px 28px rgba(36, 73, 132, 0.07);
+}
+
+.score-submit-panel p {
+  margin: 0;
+  color: #40516d;
+  font-weight: 800;
+}
+
+.score-submit-saved {
+  background: #dbf7e8;
+}
+
+.score-submit-error {
+  background: #ffe8de;
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.leaderboard-list {
+  display: grid;
+  gap: 18px;
+}
+
+.leaderboard-panel {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(39, 65, 105, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: clamp(16px, 4vw, 24px);
+  box-shadow: 0 18px 42px rgba(36, 73, 132, 0.08);
+}
+
+.leaderboard-table {
+  display: grid;
+  gap: 8px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) minmax(90px, 0.4fr) minmax(130px, 0.6fr);
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  background: #f4f7fb;
+  padding: 12px 14px;
+}
+
+.leaderboard-row span,
+.leaderboard-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.leaderboard-head {
+  color: #667085;
+  background: transparent;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.empty-state {
+  margin: 0;
+  border-radius: 8px;
+  color: #667085;
+  background: #f4f7fb;
+  padding: 14px 16px;
+  font-weight: 800;
+}
+
 .auth-page,
 .profile-page {
   place-items: start center;
@@ -652,7 +768,7 @@ p {
 
 .auth-card,
 .profile-panel {
-  width: min(100%, 520px);
+  width: min(100%, 760px);
   border: 1px solid rgba(39, 65, 105, 0.1);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
@@ -778,6 +894,44 @@ p {
   padding: 18px;
 }
 
+.score-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.score-summary-grid h3 {
+  margin: 0 0 10px;
+}
+
+.compact-score-list {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-score-row {
+  display: grid;
+  gap: 5px;
+  border-radius: 8px;
+  background: #f4f7fb;
+  padding: 12px;
+}
+
+.compact-score-row span {
+  color: #667085;
+  font-weight: 900;
+}
+
+.compact-score-row strong {
+  color: #202433;
+  font-size: 1.2rem;
+}
+
+.compact-score-row small {
+  color: #667085;
+  font-weight: 800;
+}
+
 .profile-note {
   margin: 0;
   color: #667085;
@@ -853,7 +1007,9 @@ p {
 
   .section-heading,
   .score-row,
-  .game-toolbar {
+  .game-toolbar,
+  .leaderboard-row,
+  .score-summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -892,6 +1048,14 @@ p {
 
   .profile-section {
     padding: 16px;
+  }
+
+  .leaderboard-row {
+    gap: 6px;
+  }
+
+  .leaderboard-head {
+    display: none;
   }
 
   .copy-button {

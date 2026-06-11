@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { ScoreSubmitPanel } from '../../components/ScoreSubmitPanel';
+import type { GameComponentProps } from '../../types';
 
 type Phase = 'idle' | 'waiting' | 'ready' | 'result' | 'too-soon';
 
@@ -10,10 +12,11 @@ const phaseText: Record<Phase, string> = {
   'too-soon': '点早了',
 };
 
-export function ReactionGame() {
+export function ReactionGame({ onLeaderboard, onLogin }: GameComponentProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [reactionTime, setReactionTime] = useState<number | null>(null);
   const [bestTime, setBestTime] = useState<number | null>(null);
+  const [resultKey, setResultKey] = useState('');
   const readyAt = useRef(0);
   const timerId = useRef<number | null>(null);
 
@@ -56,6 +59,7 @@ export function ReactionGame() {
 
     const currentReaction = Math.round(performance.now() - readyAt.current);
     setReactionTime(currentReaction);
+    setResultKey(`reaction-${Date.now()}-${currentReaction}`);
     setBestTime((currentBest) =>
       currentBest === null ? currentReaction : Math.min(currentBest, currentReaction),
     );
@@ -85,6 +89,19 @@ export function ReactionGame() {
           <strong>{bestTime === null ? '--' : `${bestTime} ms`}</strong>
         </div>
       </div>
+
+      {phase === 'result' && reactionTime !== null ? (
+        <ScoreSubmitPanel
+          gameSlug="reaction"
+          score={Math.max(0, 10_000 - reactionTime)}
+          scoreType="reaction_score"
+          durationMs={reactionTime}
+          metadata={{ reaction_ms: reactionTime }}
+          resultKey={resultKey}
+          onLogin={onLogin}
+          onLeaderboard={() => onLeaderboard('reaction')}
+        />
+      ) : null}
     </div>
   );
 }

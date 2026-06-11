@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ScoreSubmitPanel } from '../../components/ScoreSubmitPanel';
+import type { GameComponentProps } from '../../types';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -95,17 +97,24 @@ const keyDirections: Record<string, Direction> = {
   ArrowRight: 'right',
 };
 
-export function Game2048() {
+export function Game2048({ onLeaderboard, onLogin }: GameComponentProps) {
   const [board, setBoard] = useState(createInitialBoard);
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
+  const [moves, setMoves] = useState(0);
+  const [startedAt, setStartedAt] = useState(Date.now());
+  const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
 
   const isGameOver = useMemo(() => !hasMoves(board), [board]);
+  const maxTile = useMemo(() => Math.max(...board), [board]);
 
   const resetGame = () => {
     setBoard(createInitialBoard());
     setScore(0);
+    setMoves(0);
+    setStartedAt(Date.now());
+    setFinishedAt(null);
   };
 
   const move = (direction: Direction) => {
@@ -122,8 +131,15 @@ export function Game2048() {
     const nextScore = score + result.gained;
     setBoard(nextBoard);
     setScore(nextScore);
+    setMoves((currentMoves) => currentMoves + 1);
     setBestScore((currentBest) => Math.max(currentBest, nextScore));
   };
+
+  useEffect(() => {
+    if (isGameOver && finishedAt === null) {
+      setFinishedAt(Date.now());
+    }
+  }, [finishedAt, isGameOver]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -175,6 +191,10 @@ export function Game2048() {
           <span>最好</span>
           <strong>{bestScore}</strong>
         </div>
+        <div className="score-box">
+          <span>步数</span>
+          <strong>{moves}</strong>
+        </div>
         <button className="ghost-button" type="button" onClick={resetGame}>
           新局
         </button>
@@ -198,6 +218,19 @@ export function Game2048() {
       </div>
 
       {isGameOver ? <p className="game-message">没有可移动的方块了，开一局新的吧。</p> : null}
+
+      {isGameOver && finishedAt !== null ? (
+        <ScoreSubmitPanel
+          gameSlug="2048"
+          score={score}
+          scoreType="points"
+          durationMs={finishedAt - startedAt}
+          metadata={{ moves, max_tile: maxTile }}
+          resultKey={`2048-${finishedAt}-${score}`}
+          onLogin={onLogin}
+          onLeaderboard={() => onLeaderboard('2048')}
+        />
+      ) : null}
 
       <div className="direction-pad" aria-label="移动方向">
         <button type="button" onClick={() => move('up')}>

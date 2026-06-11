@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ScoreSubmitPanel } from '../../components/ScoreSubmitPanel';
+import type { GameComponentProps } from '../../types';
 
 type MemoryCard = {
   id: string;
@@ -13,7 +15,7 @@ const createDeck = () =>
     .map((value, index) => ({ id: `${value}-${index}`, value, matched: false }))
     .sort(() => Math.random() - 0.5);
 
-export function MemoryGame() {
+export function MemoryGame({ onLeaderboard, onLogin }: GameComponentProps) {
   const [cards, setCards] = useState<MemoryCard[]>(createDeck);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [moves, setMoves] = useState(0);
@@ -25,6 +27,8 @@ export function MemoryGame() {
   const matchedCount = useMemo(() => cards.filter((card) => card.matched).length, [cards]);
   const elapsedSeconds =
     startedAt === null ? 0 : Math.round(((finishedAt ?? now) - startedAt) / 1000);
+  const durationMs = startedAt !== null && finishedAt !== null ? finishedAt - startedAt : null;
+  const leaderboardScore = durationMs === null ? 0 : Math.max(0, 100_000 - moves * 1000 - durationMs);
 
   useEffect(() => {
     if (startedAt === null || finishedAt !== null) {
@@ -130,6 +134,19 @@ export function MemoryGame() {
       </div>
 
       {matchedCount === cards.length ? <p className="game-message">全部配对完成。</p> : null}
+
+      {matchedCount === cards.length && finishedAt !== null && durationMs !== null ? (
+        <ScoreSubmitPanel
+          gameSlug="memory"
+          score={leaderboardScore}
+          scoreType="memory_score"
+          durationMs={durationMs}
+          metadata={{ moves, pairs: values.length }}
+          resultKey={`memory-${finishedAt}-${moves}`}
+          onLogin={onLogin}
+          onLeaderboard={() => onLeaderboard('memory')}
+        />
+      ) : null}
     </div>
   );
 }

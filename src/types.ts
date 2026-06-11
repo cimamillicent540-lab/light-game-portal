@@ -2,6 +2,11 @@ import type { ComponentType } from 'react';
 
 export type GameStatus = 'ready' | 'new' | 'coming-soon';
 
+export type GameComponentProps = {
+  onLeaderboard: (gameId?: string) => void;
+  onLogin: () => void;
+};
+
 export type GameEntry = {
   id: string;
   title: string;
@@ -12,5 +17,5 @@ export type GameEntry = {
   duration: string;
   accent: string;
   status: GameStatus;
-  component: ComponentType;
+  component: ComponentType<GameComponentProps>;
 };

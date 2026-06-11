@@ -4,6 +4,7 @@ import { GameCard } from './components/GameCard';
 import { SiteHeader } from './components/SiteHeader';
 import { games, getGameById } from './data/games';
 import { LoginPage } from './pages/LoginPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
 
@@ -11,6 +12,7 @@ type Route =
   | { name: 'home' }
   | { name: 'games' }
   | { name: 'game'; gameId: string }
+  | { name: 'leaderboard'; gameId?: string }
   | { name: 'login' }
   | { name: 'register' }
   | { name: 'profile' };
@@ -22,6 +24,10 @@ const routeToPath = (route: Route) => {
 
   if (route.name === 'game') {
     return `/games/${route.gameId}`;
+  }
+
+  if (route.name === 'leaderboard') {
+    return route.gameId ? `/leaderboard?game=${route.gameId}` : '/leaderboard';
   }
 
   return `/${route.name}`;
@@ -46,6 +52,11 @@ const parseRoute = (): Route => {
 
   if (path === '/games') {
     return { name: 'games' };
+  }
+
+  if (path === '/leaderboard') {
+    const gameId = new URLSearchParams(window.location.search).get('game') ?? undefined;
+    return gameId && getGameById(gameId) ? { name: 'leaderboard', gameId } : { name: 'leaderboard' };
   }
 
   if (path === '/login') {
@@ -100,7 +111,8 @@ export function App() {
     const path = routeToPath(nextRoute);
     setRoute(nextRoute);
 
-    if (window.location.pathname === path && !window.location.hash) {
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (currentPath === path && !window.location.hash) {
       return;
     }
 
@@ -132,6 +144,7 @@ export function App() {
         userEmail={user?.email}
         onHome={() => navigate({ name: 'home' })}
         onGames={() => navigate({ name: 'games' })}
+        onLeaderboard={() => navigate({ name: 'leaderboard' })}
         onLogin={() => navigate({ name: 'login' })}
         onLogout={handleLogout}
         onProfile={() => navigate({ name: 'profile' })}
@@ -144,7 +157,10 @@ export function App() {
             <button className="ghost-button" type="button" onClick={() => navigate({ name: 'games' })}>
               返回游戏列表
             </button>
-            <ActiveGameComponent />
+            <ActiveGameComponent
+              onLogin={() => navigate({ name: 'login' })}
+              onLeaderboard={(gameId) => navigate({ name: 'leaderboard', gameId: gameId ?? activeGame.id })}
+            />
           </section>
         ) : route.name === 'login' ? (
           <LoginPage
@@ -174,12 +190,21 @@ export function App() {
               onLogout={handleLogout}
             />
           ) : null
+        ) : route.name === 'leaderboard' ? (
+          <LeaderboardPage
+            selectedGameId={route.gameId}
+            onSelectGame={(gameId) => navigate({ name: 'leaderboard', gameId })}
+            onPlay={(gameId) => navigate({ name: 'game', gameId })}
+          />
         ) : route.name === 'games' ? (
           <section className="library-page">
             <div className="page-heading">
               <p className="eyebrow">游戏目录</p>
               <h1>全部小游戏</h1>
               <p>当前收录 {games.length} 个小游戏，后续可以按分类、难度、热度继续扩展。</p>
+              <button className="text-button page-action" type="button" onClick={() => navigate({ name: 'leaderboard' })}>
+                查看排行榜
+              </button>
             </div>
 
             <div className="library-grid">
@@ -188,6 +213,7 @@ export function App() {
                   key={game.id}
                   game={game}
                   onPlay={() => navigate({ name: 'game', gameId: game.id })}
+                  onLeaderboard={() => navigate({ name: 'leaderboard', gameId: game.id })}
                 />
               ))}
             </div>
@@ -212,6 +238,13 @@ export function App() {
                   >
                     试玩 2048
                   </button>
+                  <button
+                    className="hero-button secondary"
+                    type="button"
+                    onClick={() => navigate({ name: 'leaderboard' })}
+                  >
+                    查看排行榜
+                  </button>
                 </div>
               </div>
               <div className="hero-orbit" aria-hidden="true">
@@ -227,6 +260,9 @@ export function App() {
               <button className="text-button" type="button" onClick={() => navigate({ name: 'games' })}>
                 查看全部
               </button>
+              <button className="text-button" type="button" onClick={() => navigate({ name: 'leaderboard' })}>
+                排行榜
+              </button>
             </div>
 
             <div className="game-grid">
@@ -235,6 +271,7 @@ export function App() {
                   key={game.id}
                   game={game}
                   onPlay={() => navigate({ name: 'game', gameId: game.id })}
+                  onLeaderboard={() => navigate({ name: 'leaderboard', gameId: game.id })}
                 />
               ))}
             </div>

@@ -2,6 +2,7 @@ type SiteHeaderProps = {
   userEmail?: string;
   onHome: () => void;
   onGames: () => void;
+  onLeaderboard: () => void;
   onLogin: () => void;
   onLogout: () => void;
   onProfile: () => void;
@@ -21,6 +22,7 @@ export function SiteHeader({
   userEmail,
   onHome,
   onGames,
+  onLeaderboard,
   onLogin,
   onLogout,
   onProfile,
@@ -40,6 +42,9 @@ export function SiteHeader({
         </button>
         <button className="nav-button" type="button" onClick={onGames}>
           游戏列表
+        </button>
+        <button className="nav-button" type="button" onClick={onLeaderboard}>
+          排行榜
         </button>
         {userEmail ? (
           <>

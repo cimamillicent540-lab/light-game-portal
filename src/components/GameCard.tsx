@@ -4,6 +4,7 @@ import type { GameEntry } from '../types';
 type GameCardProps = {
   game: GameEntry;
   onPlay: () => void;
+  onLeaderboard: () => void;
 };
 
 const statusLabel = {
@@ -12,7 +13,7 @@ const statusLabel = {
   'coming-soon': '筹备中',
 };
 
-export function GameCard({ game, onPlay }: GameCardProps) {
+export function GameCard({ game, onPlay, onLeaderboard }: GameCardProps) {
   return (
     <article className="game-card" style={{ '--accent': game.accent } as CSSProperties}>
       <div className="game-card-visual" aria-hidden="true">
@@ -30,9 +31,14 @@ export function GameCard({ game, onPlay }: GameCardProps) {
           <span>{game.duration}</span>
         </div>
       </div>
-      <button className="primary-button" type="button" onClick={onPlay}>
-        开始玩
-      </button>
+      <div className="game-card-actions">
+        <button className="primary-button" type="button" onClick={onPlay}>
+          开始玩
+        </button>
+        <button className="ghost-button" type="button" onClick={onLeaderboard}>
+          查看排行榜
+        </button>
+      </div>
     </article>
   );
 }

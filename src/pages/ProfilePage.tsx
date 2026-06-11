@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { ReferralStats, UserProfile, UserWallet } from '../auth/AuthContext';
+import { formatDateTime, formatDuration, formatScoreValue } from '../lib/scoreFormat';
 import { supabase } from '../lib/supabase';
+
+type UserScoreRow = {
+  id: string;
+  score: number;
+  score_type: string | null;
+  duration_ms: number | null;
+  created_at: string;
+  games: {
+    slug: string;
+    title: string;
+  } | null;
+};
 
 type ProfilePageProps = {
   user: User;
@@ -49,6 +62,9 @@ export function ProfilePage({
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [checkinMessage, setCheckinMessage] = useState('');
   const [checkinError, setCheckinError] = useState('');
+  const [recentScores, setRecentScores] = useState<UserScoreRow[]>([]);
+  const [bestScores, setBestScores] = useState<UserScoreRow[]>([]);
+  const [scoreError, setScoreError] = useState('');
   const [countdown, setCountdown] = useState(getCountdownToNextDay);
   const referralLink = useMemo(
     () => (profile?.referral_code ? `${referralBaseUrl}?ref=${profile.referral_code}` : ''),
@@ -78,6 +94,46 @@ export function ProfilePage({
 
     void loadCheckinStatus();
   }, [user.id, wallet?.balance]);
+
+  useEffect(() => {
+    const loadScores = async () => {
+      if (!supabase) {
+        return;
+      }
+
+      setScoreError('');
+
+      const { data, error } = await supabase
+        .from('game_scores')
+        .select('id, score, score_type, duration_ms, created_at, games(slug, title)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        setRecentScores([]);
+        setBestScores([]);
+        setScoreError(error.message);
+        return;
+      }
+
+      const rows = (data ?? []) as unknown as UserScoreRow[];
+      const bestByGame = new Map<string, UserScoreRow>();
+
+      rows.forEach((row) => {
+        const gameKey = row.games?.slug ?? 'unknown';
+        const currentBest = bestByGame.get(gameKey);
+        if (!currentBest || row.score > currentBest.score) {
+          bestByGame.set(gameKey, row);
+        }
+      });
+
+      setRecentScores(rows.slice(0, 5));
+      setBestScores(Array.from(bestByGame.values()));
+    };
+
+    void loadScores();
+  }, [user.id]);
 
   useEffect(() => {
     const storageKey = `referral-reward:${user.id}`;
@@ -218,6 +274,52 @@ export function ProfilePage({
           <button className="ghost-button copy-button" disabled={!referralLink} type="button" onClick={copyReferralLink}>
             复制邀请链接
           </button>
+        </div>
+
+        <div className="profile-section">
+          <div className="section-heading compact">
+            <h2>我的游戏成绩</h2>
+            <span>最近成绩 / 最好成绩</span>
+          </div>
+          {scoreError ? <p className="form-message error">{scoreError}</p> : null}
+
+          <div className="score-summary-grid">
+            <div>
+              <h3>最近成绩</h3>
+              {recentScores.length > 0 ? (
+                <div className="compact-score-list">
+                  {recentScores.map((scoreRow) => (
+                    <div className="compact-score-row" key={scoreRow.id}>
+                      <span>{scoreRow.games?.title ?? '未知游戏'}</span>
+                      <strong>{formatScoreValue(scoreRow.score, scoreRow.score_type)}</strong>
+                      <small>
+                        {formatDuration(scoreRow.duration_ms)} · {formatDateTime(scoreRow.created_at)}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">还没有保存过成绩。</p>
+              )}
+            </div>
+
+            <div>
+              <h3>最好成绩</h3>
+              {bestScores.length > 0 ? (
+                <div className="compact-score-list">
+                  {bestScores.map((scoreRow) => (
+                    <div className="compact-score-row" key={scoreRow.id}>
+                      <span>{scoreRow.games?.title ?? '未知游戏'}</span>
+                      <strong>{formatScoreValue(scoreRow.score, scoreRow.score_type)}</strong>
+                      <small>{formatDuration(scoreRow.duration_ms)}</small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">完成一局游戏后会出现在这里。</p>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="profile-actions">
