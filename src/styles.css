@@ -751,6 +751,29 @@ p {
   color: #202433;
 }
 
+.profile-field.balance {
+  background: #dbf7e8;
+}
+
+.profile-field.balance strong {
+  color: #1f5c3a;
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+}
+
+.profile-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.profile-actions .ghost-button,
+.profile-actions .profile-logout {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
 .profile-logout {
   width: 100%;
   margin: 22px 0 0;
@@ -811,5 +834,9 @@ p {
 
   .memory-board {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .profile-actions {
+    grid-template-columns: 1fr;
   }
 }

@@ -69,7 +69,16 @@ const parseRoute = (): Route => {
 };
 
 export function App() {
-  const { user, isLoading, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    wallet,
+    isLoading,
+    isAccountLoading,
+    accountError,
+    refreshAccountData,
+    signOut,
+  } = useAuth();
   const [route, setRoute] = useState<Route>(parseRoute);
 
   useEffect(() => {
@@ -151,7 +160,15 @@ export function App() {
               </div>
             </section>
           ) : user ? (
-            <ProfilePage user={user} onLogout={handleLogout} />
+            <ProfilePage
+              user={user}
+              profile={profile}
+              wallet={wallet}
+              isAccountLoading={isAccountLoading}
+              accountError={accountError}
+              onRefresh={refreshAccountData}
+              onLogout={handleLogout}
+            />
           ) : null
         ) : route.name === 'games' ? (
           <section className="library-page">
