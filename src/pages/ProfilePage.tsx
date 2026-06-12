@@ -37,7 +37,7 @@ type ProfilePageProps = {
   onLogout: () => void;
 };
 
-const referralBaseUrl = 'https://main--dancing-valkyrie-691e44.netlify.app/register';
+const referralBaseUrl = 'https://light-game-portal.netlify.app/register';
 
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
