@@ -6,6 +6,7 @@ import { games, getGameById } from './data/games';
 import { LoginPage } from './pages/LoginPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { RechargePage } from './pages/RechargePage';
 import { RegisterPage } from './pages/RegisterPage';
 import { WorldCupAdminPage } from './pages/world-cup/WorldCupAdminPage';
 import { WorldCupHistoryPage } from './pages/world-cup/WorldCupHistoryPage';
@@ -24,6 +25,7 @@ type Route =
   | { name: 'login' }
   | { name: 'register' }
   | { name: 'profile' }
+  | { name: 'recharge' }
   | { name: 'worldCup' }
   | { name: 'worldCupPredictions'; marketSlug?: string }
   | { name: 'worldCupLeaderboard' }
@@ -48,6 +50,10 @@ const routeToPath = (route: Route) => {
 
   if (route.name === 'worldCup') {
     return '/world-cup';
+  }
+
+  if (route.name === 'recharge') {
+    return '/recharge';
   }
 
   if (route.name === 'worldCupPredictions') {
@@ -117,6 +123,10 @@ const parseRoute = (): Route => {
 
   if (path === '/profile') {
     return { name: 'profile' };
+  }
+
+  if (path === '/recharge') {
+    return { name: 'recharge' };
   }
 
   if (path === '/world-cup') {
@@ -206,6 +216,10 @@ export function App() {
       navigate({ name: 'login' }, { replace: true });
     }
 
+    if (!isLoading && route.name === 'recharge' && !user) {
+      navigate({ name: 'login' }, { replace: true });
+    }
+
     if (!isLoading && route.name === 'worldCupHistory' && !user) {
       navigate({ name: 'login' }, { replace: true });
     }
@@ -233,6 +247,7 @@ export function App() {
         onLogin={() => navigate({ name: 'login' })}
         onLogout={handleLogout}
         onProfile={() => navigate({ name: 'profile' })}
+        onRecharge={() => navigate({ name: 'recharge' })}
         onRegister={() => navigate({ name: 'register' })}
         onWorldCup={() => navigate({ name: 'worldCup' })}
       />
@@ -275,6 +290,17 @@ export function App() {
               onRefresh={refreshAccountData}
               onLogout={handleLogout}
             />
+          ) : null
+        ) : route.name === 'recharge' ? (
+          isLoading ? (
+            <section className="auth-page">
+              <div className="auth-card">
+                <p className="eyebrow">Loading</p>
+                <h1>正在加载用户状态</h1>
+              </div>
+            </section>
+          ) : user ? (
+            <RechargePage user={user} wallet={wallet} onRefresh={refreshAccountData} />
           ) : null
         ) : route.name === 'leaderboard' ? (
           <LeaderboardPage

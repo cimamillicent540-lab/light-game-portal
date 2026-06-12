@@ -6,6 +6,7 @@ type SiteHeaderProps = {
   onLogin: () => void;
   onLogout: () => void;
   onProfile: () => void;
+  onRecharge: () => void;
   onRegister: () => void;
   onWorldCup: () => void;
 };
@@ -27,6 +28,7 @@ export function SiteHeader({
   onLogin,
   onLogout,
   onProfile,
+  onRecharge,
   onRegister,
   onWorldCup,
 }: SiteHeaderProps) {
@@ -58,6 +60,9 @@ export function SiteHeader({
             </button>
             <button className="nav-button" type="button" onClick={onProfile}>
               Profile
+            </button>
+            <button className="nav-button strong" type="button" onClick={onRecharge}>
+              Recharge
             </button>
             <button className="nav-button" type="button" onClick={onLogout}>
               Logout

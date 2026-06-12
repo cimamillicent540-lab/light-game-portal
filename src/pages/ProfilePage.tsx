@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { ReferralStats, UserProfile, UserWallet } from '../auth/AuthContext';
+import { getMyCoinTransactions, getMyPaymentOrders, type CoinTransaction, type PaymentOrder } from '../lib/recharge';
 import { formatDateTime, formatDuration, formatScoreValue } from '../lib/scoreFormat';
 import { supabase } from '../lib/supabase';
 import { getMyWorldCupEconomyStats, getVipWorldCupMultiplier, type WorldCupEconomyStats } from '../lib/worldCup';
@@ -77,6 +78,9 @@ export function ProfilePage({
   const [worldCupStatsError, setWorldCupStatsError] = useState('');
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [notificationError, setNotificationError] = useState('');
+  const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
+  const [coinTransactions, setCoinTransactions] = useState<CoinTransaction[]>([]);
+  const [paymentError, setPaymentError] = useState('');
   const [countdown, setCountdown] = useState(getCountdownToNextDay);
   const referralLink = useMemo(
     () => (profile?.referral_code ? `${referralBaseUrl}?ref=${profile.referral_code}` : ''),
@@ -203,6 +207,16 @@ export function ProfilePage({
 
         setNotifications((data ?? []) as NotificationRow[]);
       });
+  }, [user.id, wallet?.balance]);
+
+  useEffect(() => {
+    Promise.all([getMyPaymentOrders(), getMyCoinTransactions()])
+      .then(([orders, transactions]) => {
+        setPaymentOrders(orders);
+        setCoinTransactions(transactions);
+        setPaymentError('');
+      })
+      .catch((error: Error) => setPaymentError(error.message));
   }, [user.id, wallet?.balance]);
 
   const handleDailyCheckin = async () => {
@@ -430,6 +444,58 @@ export function ProfilePage({
             </div>
           ) : (
             <p className="empty-state">暂无通知。竞猜开奖后会显示在这里。</p>
+          )}
+        </div>
+
+        <div className="profile-section">
+          <div className="section-heading compact">
+            <h2>充值记录</h2>
+            <span>PayPal Orders</span>
+          </div>
+          {paymentError ? <p className="form-message error">{paymentError}</p> : null}
+          {paymentOrders.length ? (
+            <div className="compact-score-list">
+              {paymentOrders.map((order) => (
+                <div className="compact-score-row" key={order.id}>
+                  <span>{order.package_id ?? 'coin package'}</span>
+                  <strong>
+                    {order.status} · +{order.coins} coins
+                  </strong>
+                  <small>
+                    ${Number(order.amount_usd).toFixed(2)} {order.currency} ·{' '}
+                    {formatDateTime(order.paid_at ?? order.created_at)}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">暂无充值记录。</p>
+          )}
+        </div>
+
+        <div className="profile-section">
+          <div className="section-heading compact">
+            <h2>金币流水</h2>
+            <span>paypal_recharge 会显示在这里</span>
+          </div>
+          {coinTransactions.length ? (
+            <div className="compact-score-list">
+              {coinTransactions.map((transaction) => (
+                <div className="compact-score-row" key={transaction.id}>
+                  <span>{transaction.type}</span>
+                  <strong>
+                    {transaction.amount > 0 ? '+' : ''}
+                    {transaction.amount} coins
+                  </strong>
+                  <small>
+                    余额 {transaction.balance_after ?? '--'} · {transaction.description ?? transaction.source ?? 'wallet'} ·{' '}
+                    {formatDateTime(transaction.created_at)}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">暂无金币流水。</p>
           )}
         </div>
 

@@ -15,6 +15,7 @@
 - 手机和桌面端自适应布局
 - Supabase 邮箱密码注册、登录、退出
 - 用户中心展示资料、VIP、金币钱包
+- PayPal Sandbox 金币充值
 - 每日签到奖励金币
 - 邀请码、邀请链接和邀请奖励统计
 - World Cup Prediction Challenge 2026 活动页面、预测大厅、排行榜、历史记录和规则页
@@ -57,6 +58,7 @@
 │   ├── pages
 │   │   ├── LoginPage.tsx
 │   │   ├── ProfilePage.tsx
+│   │   ├── RechargePage.tsx
 │   │   ├── RegisterPage.tsx
 │   │   └── world-cup
 │   │       ├── WorldCupAdminPage.tsx
@@ -133,9 +135,14 @@ OPENAI_MODEL
 SPORTS_API_KEY
 SPORTS_API_FOOTBALL_LEAGUE_ID
 SPORTS_API_FOOTBALL_SEASON
+PAYPAL_CLIENT_ID
+PAYPAL_CLIENT_SECRET
+PAYPAL_ENV
+PAYPAL_WEBHOOK_ID
+VITE_PAYPAL_CLIENT_ID
 ```
 
-`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`SUPABASE_SERVICE_ROLE_KEY`、`OPENAI_API_KEY` 和 `SPORTS_API_KEY` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。`SPORTS_API_FOOTBALL_LEAGUE_ID` 和 `SPORTS_API_FOOTBALL_SEASON` 可选，默认分别为 `1` 和 `2026`。
+`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`VITE_PAYPAL_CLIENT_ID` 可以暴露给前端。`SUPABASE_SERVICE_ROLE_KEY`、`OPENAI_API_KEY`、`SPORTS_API_KEY` 和 `PAYPAL_CLIENT_SECRET` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。`SPORTS_API_FOOTBALL_LEAGUE_ID` 和 `SPORTS_API_FOOTBALL_SEASON` 可选，默认分别为 `1` 和 `2026`。`PAYPAL_ENV` 开发测试使用 `sandbox`，正式收款再切换为 `live`。
 
 ### 方式二：Netlify CLI
 
@@ -208,6 +215,24 @@ supabase/migrations/20260612_world_cup_economy.sql
 ```text
 supabase/migrations/20260612_world_cup_auto_sync.sql
 ```
+
+PayPal 金币充值迁移在：
+
+```text
+supabase/migrations/20260612_paypal_recharge.sql
+```
+
+充值页面：
+
+```text
+/recharge
+```
+
+PayPal 充值由 Netlify Functions 执行：
+
+- `paypal-create-order`：校验登录用户和充值套餐，创建 `payment_orders` pending 订单，再调用 PayPal Orders v2 Create Order。
+- `paypal-capture-order`：校验订单归属、PayPal capture 状态、USD 货币和金额一致后，调用 `finalize_paypal_recharge()`，再由数据库函数调用 `add_coins()` 发放金币。
+- `paypal-webhook`：当前基础版本只记录 PayPal webhook event，不自动发金币，后续可加验签和补单。
 
 World Cup 自动化由 Netlify Scheduled Functions 执行：
 
