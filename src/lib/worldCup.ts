@@ -135,6 +135,62 @@ export type WorldCupAdminSyncStatus = {
   settled_market_count: number;
 };
 
+export type WorldCupAdminMatch = {
+  id: string;
+  group_name: string;
+  team_home: string;
+  team_away: string;
+  kickoff_time: string;
+  status: 'scheduled' | 'live' | 'finished';
+  home_score: number | null;
+  away_score: number | null;
+  winner: string | null;
+  created_at: string;
+};
+
+export type WorldCupAdminMarket = {
+  id: string;
+  slug: string;
+  title: string;
+  market_type: string;
+  options: string[];
+  entry_cost: number;
+  reward_amount: number;
+  status: 'open' | 'locked' | 'settled' | 'cancelled';
+  locks_at: string | null;
+  settles_at: string | null;
+  correct_option: string | null;
+  match_id: string | null;
+  created_at: string;
+  prediction_count: number;
+  coins_spent: number;
+  potential_reward: number;
+};
+
+export type WorldCupAdminDashboard = {
+  matches: WorldCupAdminMatch[];
+  markets: WorldCupAdminMarket[];
+  sync_status: WorldCupAdminSyncStatus;
+  leaderboard: WorldCupLeaderboardRow[];
+  stats: {
+    total_matches: number;
+    total_predictions: number;
+    total_coins_spent: number;
+    total_coins_rewarded: number;
+  };
+};
+
+export type WorldCupAdminAction =
+  | 'import_matches'
+  | 'create_match'
+  | 'update_match'
+  | 'delete_match'
+  | 'update_score'
+  | 'bulk_scores'
+  | 'settle_market'
+  | 'cancel_market'
+  | 'settle_all';
+
 export const worldCupEventStart = new Date('2026-06-11T00:00:00Z');
 export const worldCupEventEnd = new Date('2026-07-22T23:59:59Z');
 
@@ -392,6 +448,57 @@ export const getWorldCupAdminSyncStatus = async () => {
   }
 
   return data as WorldCupAdminSyncStatus;
+};
+
+const getWorldCupAdminToken = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('请先登录管理员账号。');
+  }
+
+  return session.access_token;
+};
+
+export const getWorldCupAdminDashboard = async () => {
+  const token = await getWorldCupAdminToken();
+  const response = await fetch('/.netlify/functions/world-cup-admin', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? '世界杯运营面板读取失败');
+  }
+
+  return data as WorldCupAdminDashboard;
+};
+
+export const runWorldCupAdminAction = async (action: WorldCupAdminAction, payload: Record<string, unknown>) => {
+  const token = await getWorldCupAdminToken();
+  const response = await fetch('/.netlify/functions/world-cup-admin', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action, payload }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? '世界杯运营操作失败');
+  }
+
+  return data as unknown;
 };
 
 export const formatWorldCupDate = (value: string) =>
