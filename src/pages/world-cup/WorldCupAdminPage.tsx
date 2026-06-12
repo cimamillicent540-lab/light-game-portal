@@ -25,6 +25,19 @@ type ScoreDraft = {
   away_score: string;
 };
 
+type MatchCsvRow = {
+  group_name: string;
+  team_home: string;
+  team_away: string;
+  kickoff_time: string;
+  status: 'scheduled';
+};
+
+type CsvParseResult = {
+  rows: MatchCsvRow[];
+  error: string;
+};
+
 const emptyMatchForm: MatchFormState = {
   group_name: '',
   team_home: '',
@@ -72,32 +85,84 @@ const parseCsvLine = (line: string) => {
   return cells.map((cell) => cell.replace(/^"|"$/g, ''));
 };
 
-const parseMatchCsv = (csv: string) => {
+const isValidIsoDateTime = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime());
+};
+
+const parseMatchCsv = (csv: string): CsvParseResult => {
   const lines = csv
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+    .map((rawLine, index) => ({
+      lineNumber: index + 1,
+      rawLine,
+      line: rawLine.trim(),
+    }))
+    .filter((entry) => entry.line);
 
-  if (!lines.length) return [];
+  if (!lines.length) {
+    return { rows: [], error: '' };
+  }
 
-  const firstRow = parseCsvLine(lines[0]).map((cell) => cell.toLowerCase());
+  const firstCells = parseCsvLine(lines[0].line);
+  if (firstCells.length !== 4) {
+    return {
+      rows: [],
+      error: `第${lines[0].lineNumber}行格式错误：字段数量必须是4。内容：${lines[0].rawLine}`,
+    };
+  }
+
+  const firstRow = firstCells.map((cell) => cell.toLowerCase());
   const hasHeader = firstRow.includes('group_name') || firstRow.includes('team_home');
+  const expectedHeader = ['group_name', 'team_home', 'team_away', 'kickoff_time'];
+  const header = hasHeader ? firstRow : expectedHeader;
   const rows = hasHeader ? lines.slice(1) : lines;
-  const header = hasHeader ? firstRow : ['group_name', 'team_home', 'team_away', 'kickoff_time'];
+  const parsedRows: MatchCsvRow[] = [];
 
-  return rows
-    .map((line) => {
-      const cells = parseCsvLine(line);
-      const row = Object.fromEntries(header.map((key, index) => [key, cells[index] ?? '']));
+  if (hasHeader && expectedHeader.some((field) => !header.includes(field))) {
+    return {
+      rows: [],
+      error: `第${lines[0].lineNumber}行格式错误：表头必须包含 group_name, team_home, team_away, kickoff_time。内容：${lines[0].rawLine}`,
+    };
+  }
+
+  for (const entry of rows) {
+    const cells = parseCsvLine(entry.line);
+
+    if (cells.length !== 4) {
       return {
-        group_name: row.group_name,
-        team_home: row.team_home,
-        team_away: row.team_away,
-        kickoff_time: row.kickoff_time ? new Date(row.kickoff_time).toISOString() : '',
-        status: 'scheduled',
+        rows: parsedRows,
+        error: `第${entry.lineNumber}行格式错误：字段数量必须是4。内容：${entry.rawLine}`,
       };
-    })
-    .filter((row) => row.group_name && row.team_home && row.team_away && row.kickoff_time);
+    }
+
+    const row = Object.fromEntries(header.map((key, index) => [key, cells[index]?.trim() ?? '']));
+    const groupName = row.group_name;
+    const teamHome = row.team_home;
+    const teamAway = row.team_away;
+    const kickoffTime = row.kickoff_time;
+
+    if (!groupName || !teamHome || !teamAway || !kickoffTime || !isValidIsoDateTime(kickoffTime)) {
+      return {
+        rows: parsedRows,
+        error: `第${entry.lineNumber}行格式错误：请确认4个字段都不为空，且 kickoff_time 是合法 ISO 时间。内容：${entry.rawLine}`,
+      };
+    }
+
+    parsedRows.push({
+      group_name: groupName,
+      team_home: teamHome,
+      team_away: teamAway,
+      kickoff_time: new Date(kickoffTime).toISOString(),
+      status: 'scheduled',
+    });
+  }
+
+  return { rows: parsedRows, error: '' };
 };
 
 const parseScoreCsv = (csv: string) =>
@@ -137,6 +202,7 @@ export function WorldCupAdminPage() {
   const [isWorking, setIsWorking] = useState(false);
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const matchCsvParseResult = useMemo(() => parseMatchCsv(csvText), [csvText]);
 
   const loadDashboard = async () => {
     if (!user) {
@@ -214,7 +280,39 @@ export function WorldCupAdminPage() {
 
   const handleCsvFile = async (file?: File) => {
     if (!file) return;
+    setMessage(`已读取文件：${file.name}`);
+    setErrorMessage('');
     setCsvText(await file.text());
+  };
+
+  const importMatchCsv = async () => {
+    const { rows, error } = matchCsvParseResult;
+
+    setMessage('');
+    setErrorMessage('');
+
+    if (error) {
+      setErrorMessage(error);
+      return;
+    }
+
+    if (!rows.length) {
+      setErrorMessage('没有可导入的比赛行。');
+      return;
+    }
+
+    setIsWorking(true);
+
+    try {
+      const result = (await runWorldCupAdminAction('import_matches', { rows })) as { imported?: number };
+      const imported = result.imported ?? rows.length;
+      setMessage(`导入成功：${imported} 场比赛。`);
+      await loadDashboard();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'CSV 导入失败');
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   const startEditMatch = (match: WorldCupAdminMatch) => {
@@ -329,18 +427,22 @@ export function WorldCupAdminPage() {
                 <span>CSV 内容</span>
                 <textarea value={csvText} onChange={(event) => setCsvText(event.target.value)} rows={7} />
               </label>
+              {matchCsvParseResult.error ? (
+                <p className="form-message error">{matchCsvParseResult.error}</p>
+              ) : (
+                <p className="form-message success">导入前预览：解析出 {matchCsvParseResult.rows.length} 场比赛。</p>
+              )}
               <button
                 className="primary-button compact-button"
                 type="button"
-                disabled={isWorking}
-                onClick={() => {
-                  const rows = parseMatchCsv(csvText);
-                  void runAction(`已导入 ${rows.length} 场比赛。`, 'import_matches', { rows });
-                }}
+                disabled={isWorking || Boolean(matchCsvParseResult.error) || matchCsvParseResult.rows.length === 0}
+                onClick={importMatchCsv}
               >
                 批量导入世界杯赛程
               </button>
-              <p className="admin-hint">字段：group_name, team_home, team_away, kickoff_time。导入后数据库 trigger 会自动生成 match_winner 市场。</p>
+              <p className="admin-hint">
+                字段必须严格为4列：group_name, team_home, team_away, kickoff_time。kickoff_time 请使用 ISO 时间，例如 2026-06-12T20:00:00Z。
+              </p>
             </article>
 
             <article className="leaderboard-panel">
