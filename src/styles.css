@@ -761,11 +761,41 @@ p {
 }
 
 .wc-stats-grid,
+.stats-grid,
 .market-grid,
 .rules-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid rgba(39, 65, 105, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.stat-card span {
+  color: #667085;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.stat-card strong {
+  color: #202433;
+  font-size: 1.45rem;
+}
+
+.result-win {
+  color: #167346;
+}
+
+.result-lost {
+  color: #b42318;
 }
 
 .market-card,

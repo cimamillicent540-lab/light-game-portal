@@ -117,6 +117,24 @@ export type WorldCupEconomyStats = {
   is_highlighted: boolean;
 };
 
+export type WorldCupAdminSyncStatus = {
+  latest_syncs: Array<{
+    sync_type: 'matches' | 'scores' | 'settlement';
+    provider: string;
+    status: 'success' | 'failed';
+    last_synced_at: string;
+    message: string | null;
+    records_processed: number;
+  }>;
+  match_count: number;
+  scheduled_count: number;
+  live_count: number;
+  finished_count: number;
+  market_count: number;
+  pending_settlement_count: number;
+  settled_market_count: number;
+};
+
 export const worldCupEventStart = new Date('2026-06-11T00:00:00Z');
 export const worldCupEventEnd = new Date('2026-07-22T23:59:59Z');
 
@@ -360,6 +378,20 @@ export const getMyWorldCupEconomyStats = async () => {
   }
 
   return data as WorldCupEconomyStats;
+};
+
+export const getWorldCupAdminSyncStatus = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase.rpc('wc_get_admin_sync_status');
+
+  if (error) {
+    throw error;
+  }
+
+  return data as WorldCupAdminSyncStatus;
 };
 
 export const formatWorldCupDate = (value: string) =>

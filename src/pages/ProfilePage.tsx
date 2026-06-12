@@ -17,6 +17,13 @@ type UserScoreRow = {
   } | null;
 };
 
+type NotificationRow = {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+};
+
 type ProfilePageProps = {
   user: User;
   accessToken: string | null;
@@ -68,6 +75,8 @@ export function ProfilePage({
   const [scoreError, setScoreError] = useState('');
   const [worldCupStats, setWorldCupStats] = useState<WorldCupEconomyStats | null>(null);
   const [worldCupStatsError, setWorldCupStatsError] = useState('');
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [notificationError, setNotificationError] = useState('');
   const [countdown, setCountdown] = useState(getCountdownToNextDay);
   const referralLink = useMemo(
     () => (profile?.referral_code ? `${referralBaseUrl}?ref=${profile.referral_code}` : ''),
@@ -173,6 +182,27 @@ export function ProfilePage({
     getMyWorldCupEconomyStats()
       .then(setWorldCupStats)
       .catch((error: Error) => setWorldCupStatsError(error.message));
+  }, [user.id, wallet?.balance]);
+
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+
+    supabase
+      .from('notifications')
+      .select('id, title, message, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data, error }) => {
+        if (error) {
+          setNotificationError(error.message);
+          return;
+        }
+
+        setNotifications((data ?? []) as NotificationRow[]);
+      });
   }, [user.id, wallet?.balance]);
 
   const handleDailyCheckin = async () => {
@@ -380,6 +410,27 @@ export function ProfilePage({
               </strong>
             </div>
           </div>
+        </div>
+
+        <div className="profile-section">
+          <div className="section-heading compact">
+            <h2>最近通知</h2>
+            <span>自动开奖消息</span>
+          </div>
+          {notificationError ? <p className="form-message error">{notificationError}</p> : null}
+          {notifications.length ? (
+            <div className="compact-score-list">
+              {notifications.map((notification) => (
+                <div className="compact-score-row" key={notification.id}>
+                  <span>{notification.title}</span>
+                  <strong>{notification.message}</strong>
+                  <small>{formatDateTime(notification.created_at)}</small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">暂无通知。竞猜开奖后会显示在这里。</p>
+          )}
         </div>
 
         <div className="profile-actions">

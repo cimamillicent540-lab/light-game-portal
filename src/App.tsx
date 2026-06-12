@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
+import { WorldCupAdminPage } from './pages/world-cup/WorldCupAdminPage';
 import { WorldCupHistoryPage } from './pages/world-cup/WorldCupHistoryPage';
 import { WorldCupHomePage } from './pages/world-cup/WorldCupHomePage';
 import { WorldCupLeaderboardPage } from './pages/world-cup/WorldCupLeaderboardPage';
@@ -29,7 +30,8 @@ type Route =
   | { name: 'worldCupHistory' }
   | { name: 'worldCupMatches' }
   | { name: 'worldCupRules' }
-  | { name: 'worldCupShop' };
+  | { name: 'worldCupShop' }
+  | { name: 'worldCupAdmin' };
 
 const routeToPath = (route: Route) => {
   if (route.name === 'home') {
@@ -70,6 +72,10 @@ const routeToPath = (route: Route) => {
 
   if (route.name === 'worldCupShop') {
     return '/world-cup/shop';
+  }
+
+  if (route.name === 'worldCupAdmin') {
+    return '/admin/worldcup';
   }
 
   return `/${route.name}`;
@@ -140,6 +146,10 @@ const parseRoute = (): Route => {
 
   if (path === '/world-cup/shop') {
     return { name: 'worldCupShop' };
+  }
+
+  if (path === '/admin/worldcup') {
+    return { name: 'worldCupAdmin' };
   }
 
   const gameMatch = path.match(/^\/games\/([^/]+)$/);
@@ -299,6 +309,8 @@ export function App() {
           <WorldCupRulesPage />
         ) : route.name === 'worldCupShop' ? (
           <WorldCupShopPage onLogin={() => navigate({ name: 'login' })} />
+        ) : route.name === 'worldCupAdmin' ? (
+          <WorldCupAdminPage />
         ) : route.name === 'games' ? (
           <section className="library-page">
             <div className="page-heading">

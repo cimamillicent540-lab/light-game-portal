@@ -18,6 +18,8 @@
 - 每日签到奖励金币
 - 邀请码、邀请链接和邀请奖励统计
 - World Cup Prediction Challenge 2026 活动页面、预测大厅、排行榜、历史记录和规则页
+- World Cup 自动赛程同步、比分同步、自动开奖和自动派奖
+- World Cup 商城、AI 高级预测和运营后台状态页
 
 ## 项目结构
 
@@ -27,7 +29,13 @@
 ├── netlify.toml
 ├── netlify
 │   └── functions
-│       └── grant-referral-reward.mts
+│       ├── _shared
+│       │   └── worldCupSync.mts
+│       ├── grant-referral-reward.mts
+│       ├── settle-world-cup.mts
+│       ├── sync-world-cup-matches.mts
+│       ├── sync-world-cup-scores.mts
+│       └── world-cup-ai-analysis.mts
 ├── package.json
 ├── public
 │   └── portal-symbol.svg
@@ -51,11 +59,14 @@
 │   │   ├── ProfilePage.tsx
 │   │   ├── RegisterPage.tsx
 │   │   └── world-cup
+│   │       ├── WorldCupAdminPage.tsx
 │   │       ├── WorldCupHistoryPage.tsx
 │   │       ├── WorldCupHomePage.tsx
 │   │       ├── WorldCupLeaderboardPage.tsx
+│   │       ├── WorldCupMatchesPage.tsx
 │   │       ├── WorldCupPredictionsPage.tsx
-│   │       └── WorldCupRulesPage.tsx
+│   │       ├── WorldCupRulesPage.tsx
+│   │       └── WorldCupShopPage.tsx
 │   ├── styles.css
 │   └── types.ts
 ├── supabase
@@ -119,9 +130,12 @@ VITE_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 OPENAI_API_KEY
 OPENAI_MODEL
+SPORTS_API_KEY
+SPORTS_API_FOOTBALL_LEAGUE_ID
+SPORTS_API_FOOTBALL_SEASON
 ```
 
-`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`SUPABASE_SERVICE_ROLE_KEY` 和 `OPENAI_API_KEY` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。
+`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`SUPABASE_SERVICE_ROLE_KEY`、`OPENAI_API_KEY` 和 `SPORTS_API_KEY` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。`SPORTS_API_FOOTBALL_LEAGUE_ID` 和 `SPORTS_API_FOOTBALL_SEASON` 可选，默认分别为 `1` 和 `2026`。
 
 ### 方式二：Netlify CLI
 
@@ -187,6 +201,24 @@ supabase/migrations/20260611_world_cup_matches.sql
 
 ```text
 supabase/migrations/20260612_world_cup_economy.sql
+```
+
+世界杯自动同步系统迁移在：
+
+```text
+supabase/migrations/20260612_world_cup_auto_sync.sql
+```
+
+World Cup 自动化由 Netlify Scheduled Functions 执行：
+
+- `sync-world-cup-matches`：每日同步 API-Football 世界杯赛程，并由数据库触发器自动生成 `match_winner` 预测市场。
+- `sync-world-cup-scores`：每 5 分钟同步 live / finished 比赛比分，覆盖比赛期间高频更新。
+- `settle-world-cup`：每 10 分钟调用 `settleWorldCupMarkets()`，自动开奖、调用 `add_coins()` 派奖、写入 `notifications`。
+
+运营状态页：
+
+```text
+/admin/worldcup
 ```
 
 管理员导入赛程 CSV 可使用：
