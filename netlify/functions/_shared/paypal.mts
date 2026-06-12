@@ -57,9 +57,40 @@ export const requireUser = async (request: Request) => {
   return { supabase, user };
 };
 
+export const getPaypalEnvironment = () => (Netlify.env.get('PAYPAL_ENV') ?? 'sandbox').toLowerCase();
+
+export const isTestPaymentsEnabled = () => {
+  const paypalEnvironment = getPaypalEnvironment();
+  const nodeEnvironment = (Netlify.env.get('NODE_ENV') ?? '').toLowerCase();
+  const explicitTestFlag = (Netlify.env.get('TEST_PAYMENTS_ENABLED') ?? '').toLowerCase() === 'true';
+
+  return paypalEnvironment === 'sandbox' && (nodeEnvironment !== 'production' || explicitTestFlag);
+};
+
+export const requireAdminUser = async (request: Request) => {
+  const { supabase, user, error } = await requireUser(request);
+  if (error || !user) {
+    return { supabase, user, error };
+  }
+
+  const allowlist = (Netlify.env.get('ADMIN_EMAILS') ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!allowlist.length) {
+    return { supabase, user, error: jsonResponse({ error: 'ADMIN_EMAILS is not configured' }, 403) };
+  }
+
+  if (!allowlist.includes((user.email ?? '').toLowerCase())) {
+    return { supabase, user, error: jsonResponse({ error: 'admin access denied' }, 403) };
+  }
+
+  return { supabase, user };
+};
+
 export const getPaypalBaseUrl = () => {
-  const environment = (Netlify.env.get('PAYPAL_ENV') ?? 'sandbox').toLowerCase();
-  return environment === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+  return getPaypalEnvironment() === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 };
 
 export const getPaypalAccessToken = async () => {

@@ -99,6 +99,45 @@ export const capturePayPalOrder = async (paypalOrderId: string) => {
   return data as { already_processed: boolean; balance: number; coins: number };
 };
 
+export const getPayPalSimulationStatus = async () => {
+  const accessToken = await getAccessToken();
+  const response = await fetch('/.netlify/functions/paypal-simulate-success', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 403 || response.status === 401) {
+    return { enabled: false, admin: false };
+  }
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? 'PayPal simulation status failed');
+  }
+
+  return data as { enabled: boolean; admin: boolean };
+};
+
+export const simulatePayPalSuccess = async (packageId: string) => {
+  const accessToken = await getAccessToken();
+  const response = await fetch('/.netlify/functions/paypal-simulate-success', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ package_id: packageId }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? 'PayPal simulation failed');
+  }
+
+  return data as { already_processed: boolean; balance: number; coins: number };
+};
+
 export const getMyPaymentOrders = async () => {
   if (!supabase) {
     throw new Error('Supabase 环境变量尚未配置。');

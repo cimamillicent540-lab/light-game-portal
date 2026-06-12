@@ -5,7 +5,9 @@ import {
   capturePayPalOrder,
   createPayPalOrder,
   getCoinPackages,
+  getPayPalSimulationStatus,
   paypalClientId,
+  simulatePayPalSuccess,
   type CoinPackage,
 } from '../lib/recharge';
 
@@ -67,6 +69,7 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPayPalReady, setIsPayPalReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [canSimulatePayment, setCanSimulatePayment] = useState(false);
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const buttonsRef = useRef<HTMLDivElement | null>(null);
@@ -92,6 +95,12 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
     loadPayPalSdk()
       .then(() => setIsPayPalReady(true))
       .catch((error: Error) => setErrorMessage(error.message));
+  }, []);
+
+  useEffect(() => {
+    getPayPalSimulationStatus()
+      .then((status) => setCanSimulatePayment(status.enabled && status.admin))
+      .catch(() => setCanSimulatePayment(false));
   }, []);
 
   useEffect(() => {
@@ -136,6 +145,26 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
       void buttons.close?.();
     };
   }, [isPayPalReady, onRefresh, selectedPackageId]);
+
+  const handleSimulatePayment = async () => {
+    if (!selectedPackageId || isProcessing) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setMessage('');
+    setErrorMessage('');
+
+    try {
+      const result = await simulatePayPalSuccess(selectedPackageId);
+      await onRefresh();
+      setMessage(`Payment successful\n+${result.coins} coins`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'PayPal simulation failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <section className="recharge-page">
@@ -193,6 +222,16 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
           </p>
         ) : null}
         <div className={isProcessing ? 'paypal-buttons processing' : 'paypal-buttons'} ref={buttonsRef} />
+        {canSimulatePayment ? (
+          <button
+            className="ghost-button compact-button simulate-payment-button"
+            type="button"
+            disabled={isProcessing || !selectedPackageId}
+            onClick={handleSimulatePayment}
+          >
+            模拟支付成功
+          </button>
+        ) : null}
       </section>
     </section>
   );

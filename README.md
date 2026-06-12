@@ -139,10 +139,11 @@ PAYPAL_CLIENT_ID
 PAYPAL_CLIENT_SECRET
 PAYPAL_ENV
 PAYPAL_WEBHOOK_ID
+TEST_PAYMENTS_ENABLED
 VITE_PAYPAL_CLIENT_ID
 ```
 
-`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`VITE_PAYPAL_CLIENT_ID` 可以暴露给前端。`SUPABASE_SERVICE_ROLE_KEY`、`OPENAI_API_KEY`、`SPORTS_API_KEY` 和 `PAYPAL_CLIENT_SECRET` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。`SPORTS_API_FOOTBALL_LEAGUE_ID` 和 `SPORTS_API_FOOTBALL_SEASON` 可选，默认分别为 `1` 和 `2026`。`PAYPAL_ENV` 开发测试使用 `sandbox`，正式收款再切换为 `live`。
+`VITE_SUPABASE_ANON_KEY` 只能使用 Supabase anon public / publishable key。`VITE_PAYPAL_CLIENT_ID` 可以暴露给前端。`SUPABASE_SERVICE_ROLE_KEY`、`OPENAI_API_KEY`、`SPORTS_API_KEY` 和 `PAYPAL_CLIENT_SECRET` 只给 Netlify Functions 在服务端使用，不要加 `VITE_` 前缀，不要写入前端代码，也不要提交到 GitHub。`OPENAI_MODEL` 可选，默认使用 `gpt-4.1-mini`。`SPORTS_API_FOOTBALL_LEAGUE_ID` 和 `SPORTS_API_FOOTBALL_SEASON` 可选，默认分别为 `1` 和 `2026`。`PAYPAL_ENV` 开发测试使用 `sandbox`，正式收款再切换为 `live`。`TEST_PAYMENTS_ENABLED=true` 只用于 sandbox 测试支付模拟，生产 live 环境不会启用模拟支付。
 
 ### 方式二：Netlify CLI
 
@@ -233,6 +234,7 @@ PayPal 充值由 Netlify Functions 执行：
 - `paypal-create-order`：校验登录用户和充值套餐，创建 `payment_orders` pending 订单，再调用 PayPal Orders v2 Create Order。
 - `paypal-capture-order`：校验订单归属、PayPal capture 状态、USD 货币和金额一致后，调用 `finalize_paypal_recharge()`，再由数据库函数调用 `add_coins()` 发放金币。
 - `paypal-webhook`：当前基础版本只记录 PayPal webhook event，不自动发金币，后续可加验签和补单。
+- `paypal-simulate-success`：仅 `PAYPAL_ENV=sandbox` 且 `NODE_ENV` 非 production 或 `TEST_PAYMENTS_ENABLED=true` 时可用，并且只有 `ADMIN_EMAILS` 中的邮箱可以调用。该函数会创建模拟 paid 订单并通过 `finalize_paypal_recharge()` 发放金币。
 
 World Cup 自动化由 Netlify Scheduled Functions 执行：
 

@@ -1153,6 +1153,13 @@ p {
   pointer-events: none;
 }
 
+.simulate-payment-button {
+  margin-top: 12px;
+  border-color: rgba(15, 183, 175, 0.35);
+  color: #11645f;
+  background: #ecfffb;
+}
+
 .leaderboard-table {
   display: grid;
   gap: 8px;
