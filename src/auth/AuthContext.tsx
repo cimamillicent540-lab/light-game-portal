@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 export type UserProfile = {
   username: string | null;
   vip_level: string | null;
+  vip_expires_at: string | null;
   referral_code: string | null;
 };
 
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [profileResult, walletResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('username, vip_level, referral_code')
+        .select('username, vip_level, vip_expires_at, referral_code')
         .eq('id', userId)
         .maybeSingle(),
       supabase

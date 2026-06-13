@@ -13,6 +13,34 @@ export type CoinPackage = {
   coins: number;
 };
 
+export type VipPlan = {
+  id: string;
+  slug: string;
+  name: string;
+  price_usd: number;
+  duration_days: number;
+  reward_multiplier: number;
+};
+
+export type PaypalProduct =
+  | {
+      kind: 'coins';
+      id: string;
+      name: string;
+      amount_usd: number;
+      coins: number;
+      description: string;
+    }
+  | {
+      kind: 'vip';
+      id: string;
+      slug: string;
+      name: string;
+      amount_usd: number;
+      coins: 0;
+      description: string;
+    };
+
 export const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -123,3 +151,55 @@ export const formatUsd = (value: number | string) => Number(value).toFixed(2);
 
 export const isUsdAmountMatch = (actual: string | number | undefined, expected: string | number) =>
   formatUsd(actual ?? 0) === formatUsd(expected);
+
+export const getPaypalProduct = async (
+  supabase: ReturnType<typeof getServiceClient>,
+  input: { package_id?: string; vip_plan_slug?: string },
+): Promise<PaypalProduct | null> => {
+  if (input.vip_plan_slug) {
+    const { data: vipPlan, error } = await supabase
+      .from('vip_plans')
+      .select('id, slug, name, price_usd, duration_days, reward_multiplier')
+      .eq('slug', input.vip_plan_slug)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!vipPlan) return null;
+
+    const selectedPlan = vipPlan as VipPlan;
+    return {
+      kind: 'vip',
+      id: selectedPlan.id,
+      slug: selectedPlan.slug,
+      name: selectedPlan.name,
+      amount_usd: selectedPlan.price_usd,
+      coins: 0,
+      description: `${selectedPlan.name} VIP subscription - ${selectedPlan.duration_days} days`,
+    };
+  }
+
+  if (input.package_id) {
+    const { data: coinPackage, error } = await supabase
+      .from('coin_packages')
+      .select('id, name, price_usd, coins')
+      .eq('id', input.package_id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!coinPackage) return null;
+
+    const selectedPackage = coinPackage as CoinPackage;
+    return {
+      kind: 'coins',
+      id: selectedPackage.id,
+      name: selectedPackage.name,
+      amount_usd: selectedPackage.price_usd,
+      coins: selectedPackage.coins,
+      description: `${selectedPackage.name} - ${selectedPackage.coins} coins`,
+    };
+  }
+
+  return null;
+};

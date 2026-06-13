@@ -7,9 +7,31 @@ export type CoinPackage = {
   coins: number;
 };
 
+export type VipPlan = {
+  id: string;
+  slug: string;
+  name: string;
+  price_usd: number;
+  duration_days: number;
+  daily_bonus: number;
+  reward_multiplier: number;
+};
+
+export type PaymentProductSelection =
+  | {
+      kind: 'coins';
+      packageId: string;
+    }
+  | {
+      kind: 'vip';
+      vipPlanSlug: string;
+    };
+
 export type PaymentOrder = {
   id: string;
   package_id: string | null;
+  vip_plan_id: string | null;
+  payment_kind: 'coins' | 'vip';
   amount_usd: number;
   coins: number;
   currency: string;
@@ -61,7 +83,27 @@ export const getCoinPackages = async () => {
   return (data ?? []) as CoinPackage[];
 };
 
-export const createPayPalOrder = async (packageId: string) => {
+export const getVipPlans = async () => {
+  if (!supabase) {
+    throw new Error('Supabase 环境变量尚未配置。');
+  }
+
+  const { data, error } = await supabase
+    .from('vip_plans')
+    .select('id, slug, name, price_usd, duration_days, daily_bonus, reward_multiplier')
+    .eq('is_active', true)
+    .order('price_usd', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as VipPlan[];
+};
+
+const selectionToBody = (selection: PaymentProductSelection) =>
+  selection.kind === 'coins'
+    ? { package_id: selection.packageId }
+    : { vip_plan_slug: selection.vipPlanSlug };
+
+export const createPayPalOrder = async (selection: PaymentProductSelection) => {
   const accessToken = await getAccessToken();
   const response = await fetch('/.netlify/functions/paypal-create-order', {
     method: 'POST',
@@ -69,7 +111,7 @@ export const createPayPalOrder = async (packageId: string) => {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ package_id: packageId }),
+    body: JSON.stringify(selectionToBody(selection)),
   });
 
   const data = await response.json();
@@ -77,7 +119,7 @@ export const createPayPalOrder = async (packageId: string) => {
     throw new Error(data.error ?? 'PayPal order creation failed');
   }
 
-  return data as { payment_order_id: string; paypal_order_id: string };
+  return data as { payment_order_id: string; paypal_order_id: string; payment_kind: 'coins' | 'vip' };
 };
 
 export const capturePayPalOrder = async (paypalOrderId: string) => {
@@ -96,7 +138,17 @@ export const capturePayPalOrder = async (paypalOrderId: string) => {
     throw new Error(data.error ?? 'PayPal capture failed');
   }
 
-  return data as { already_processed: boolean; balance: number; coins: number };
+  return data as {
+    already_processed: boolean;
+    payment_kind: 'coins' | 'vip';
+    balance: number;
+    coins: number;
+    vip?: {
+      vip_level?: string;
+      expires_at?: string;
+      reward_multiplier?: number;
+    };
+  };
 };
 
 export const getPayPalSimulationStatus = async () => {
@@ -119,7 +171,7 @@ export const getPayPalSimulationStatus = async () => {
   return data as { enabled: boolean; admin: boolean };
 };
 
-export const simulatePayPalSuccess = async (packageId: string) => {
+export const simulatePayPalSuccess = async (selection: PaymentProductSelection) => {
   const accessToken = await getAccessToken();
   const response = await fetch('/.netlify/functions/paypal-simulate-success', {
     method: 'POST',
@@ -127,7 +179,7 @@ export const simulatePayPalSuccess = async (packageId: string) => {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ package_id: packageId }),
+    body: JSON.stringify(selectionToBody(selection)),
   });
 
   const data = await response.json();
@@ -135,7 +187,17 @@ export const simulatePayPalSuccess = async (packageId: string) => {
     throw new Error(data.error ?? 'PayPal simulation failed');
   }
 
-  return data as { already_processed: boolean; balance: number; coins: number };
+  return data as {
+    already_processed: boolean;
+    payment_kind: 'coins' | 'vip';
+    balance: number;
+    coins: number;
+    vip?: {
+      vip_level?: string;
+      expires_at?: string;
+      reward_multiplier?: number;
+    };
+  };
 };
 
 export const getMyPaymentOrders = async () => {
@@ -145,7 +207,7 @@ export const getMyPaymentOrders = async () => {
 
   const { data, error } = await supabase
     .from('payment_orders')
-    .select('id, package_id, amount_usd, coins, currency, status, created_at, paid_at')
+    .select('id, package_id, vip_plan_id, payment_kind, amount_usd, coins, currency, status, created_at, paid_at')
     .order('created_at', { ascending: false })
     .limit(20);
 

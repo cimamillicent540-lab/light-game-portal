@@ -52,7 +52,7 @@ export default async (request: Request) => {
 
     const { data: paymentOrder, error: orderError } = await supabase
       .from('payment_orders')
-      .select('id, user_id, provider_order_id, amount_usd, coins, currency, status')
+      .select('id, user_id, provider_order_id, payment_kind, amount_usd, coins, currency, status')
       .eq('provider', 'paypal')
       .eq('provider_order_id', paypalOrderId)
       .eq('user_id', user.id)
@@ -72,6 +72,7 @@ export default async (request: Request) => {
 
       return jsonResponse({
         already_processed: true,
+        payment_kind: paymentOrder.payment_kind ?? 'coins',
         coins: paymentOrder.coins,
         balance: wallet?.balance ?? 0,
       });
@@ -121,7 +122,7 @@ export default async (request: Request) => {
       );
     }
 
-    const { data: finalizeResult, error: finalizeError } = await supabase.rpc('finalize_paypal_recharge', {
+    const { data: finalizeResult, error: finalizeError } = await supabase.rpc('finalize_paypal_order', {
       p_order_id: paymentOrder.id,
       p_provider_order_id: paypalOrderId,
       p_raw_response: paypalCapture,

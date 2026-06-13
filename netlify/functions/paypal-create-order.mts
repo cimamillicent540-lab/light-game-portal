@@ -2,13 +2,14 @@ import {
   formatUsd,
   getPaypalAccessToken,
   getPaypalBaseUrl,
+  getPaypalProduct,
   jsonResponse,
   requireUser,
-  type CoinPackage,
 } from './_shared/paypal.mjs';
 
 type CreateOrderRequest = {
   package_id?: string;
+  vip_plan_slug?: string;
 };
 
 export default async (request: Request) => {
@@ -22,33 +23,26 @@ export default async (request: Request) => {
     if (!user) return jsonResponse({ error: 'login required' }, 401);
 
     const body = (await request.json()) as CreateOrderRequest;
-    const packageId = body.package_id;
+    const product = await getPaypalProduct(supabase, body);
 
-    if (!packageId) {
-      return jsonResponse({ error: 'package_id is required' }, 400);
+    if (!body.package_id && !body.vip_plan_slug) {
+      return jsonResponse({ error: 'package_id or vip_plan_slug is required' }, 400);
     }
 
-    const { data: coinPackage, error: packageError } = await supabase
-      .from('coin_packages')
-      .select('id, name, price_usd, coins')
-      .eq('id', packageId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (packageError) throw packageError;
-    if (!coinPackage) {
-      return jsonResponse({ error: 'coin package not found' }, 404);
+    if (!product) {
+      return jsonResponse({ error: 'payment product not found' }, 404);
     }
 
-    const selectedPackage = coinPackage as CoinPackage;
     const { data: paymentOrder, error: orderError } = await supabase
       .from('payment_orders')
       .insert({
         user_id: user.id,
         provider: 'paypal',
-        package_id: selectedPackage.id,
-        amount_usd: selectedPackage.price_usd,
-        coins: selectedPackage.coins,
+        payment_kind: product.kind,
+        package_id: product.kind === 'coins' ? product.id : null,
+        vip_plan_id: product.kind === 'vip' ? product.id : null,
+        amount_usd: product.amount_usd,
+        coins: product.coins,
         currency: 'USD',
         status: 'pending',
       })
@@ -72,10 +66,10 @@ export default async (request: Request) => {
             reference_id: paymentOrder.id,
             custom_id: paymentOrder.id,
             invoice_id: paymentOrder.id,
-            description: `${selectedPackage.name} - ${selectedPackage.coins} coins`,
+            description: product.description,
             amount: {
               currency_code: 'USD',
-              value: formatUsd(selectedPackage.price_usd),
+              value: formatUsd(product.amount_usd),
             },
           },
         ],
@@ -110,6 +104,7 @@ export default async (request: Request) => {
     return jsonResponse({
       payment_order_id: paymentOrder.id,
       paypal_order_id: paypalOrder.id,
+      payment_kind: product.kind,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'PayPal order creation failed';

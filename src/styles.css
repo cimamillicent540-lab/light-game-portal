@@ -1129,6 +1129,16 @@ p {
   outline: 3px solid rgba(44, 109, 246, 0.14);
 }
 
+.vip-package {
+  background: #fff9ed;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.vip-package.selected {
+  border-color: #f59e0b;
+  outline-color: rgba(245, 158, 11, 0.18);
+}
+
 .recharge-package span {
   color: #40516d;
   font-weight: 900;
@@ -1158,6 +1168,30 @@ p {
   border-color: rgba(15, 183, 175, 0.35);
   color: #11645f;
   background: #ecfffb;
+}
+
+.compact-filter {
+  margin-top: 12px;
+}
+
+.empty-search-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.14);
+  border-radius: 8px;
+  background: #fff7f7;
+  padding: 16px;
+}
+
+.empty-search-panel h2,
+.empty-search-panel h3,
+.empty-search-panel p {
+  margin: 0;
+}
+
+.empty-search-panel p {
+  color: #667085;
+  font-weight: 800;
 }
 
 .leaderboard-table {

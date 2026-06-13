@@ -86,7 +86,7 @@ export function ProfilePage({
     () => (profile?.referral_code ? `${referralBaseUrl}?ref=${profile.referral_code}` : ''),
     [profile?.referral_code],
   );
-  const worldCupMultiplier = getVipWorldCupMultiplier(profile?.vip_level);
+  const worldCupMultiplier = getVipWorldCupMultiplier(profile?.vip_level, profile?.vip_expires_at);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setCountdown(getCountdownToNextDay()), 1000);
@@ -278,6 +278,10 @@ export function ProfilePage({
             <span>VIP Level</span>
             <strong>{profile?.vip_level || 'free'}</strong>
           </div>
+          <div className="profile-field">
+            <span>VIP 到期时间</span>
+            <strong>{profile?.vip_expires_at ? formatDateTime(profile.vip_expires_at) : '未开通'}</strong>
+          </div>
           <div className="profile-field balance">
             <span>金币余额</span>
             <strong>{wallet?.balance ?? 0}</strong>
@@ -412,6 +416,18 @@ export function ProfilePage({
               <strong>{worldCupStats?.current_rank ? `#${worldCupStats.current_rank}` : '--'}</strong>
             </div>
             <div className="profile-field">
+              <span>收益榜排名</span>
+              <strong>{worldCupStats?.profit_rank ? `#${worldCupStats.profit_rank}` : '--'}</strong>
+            </div>
+            <div className="profile-field">
+              <span>金币榜排名</span>
+              <strong>{worldCupStats?.coins_rank ? `#${worldCupStats.coins_rank}` : '--'}</strong>
+            </div>
+            <div className="profile-field">
+              <span>正确率榜排名</span>
+              <strong>{worldCupStats?.accuracy_rank ? `#${worldCupStats.accuracy_rank}` : '--'}</strong>
+            </div>
+            <div className="profile-field">
               <span>头像框</span>
               <strong>{worldCupStats?.world_cup_avatar_frame ?? '未拥有'}</strong>
             </div>
@@ -457,9 +473,9 @@ export function ProfilePage({
             <div className="compact-score-list">
               {paymentOrders.map((order) => (
                 <div className="compact-score-row" key={order.id}>
-                  <span>{order.package_id ?? 'coin package'}</span>
+                  <span>{order.payment_kind === 'vip' ? 'VIP Subscription' : order.package_id ?? 'coin package'}</span>
                   <strong>
-                    {order.status} · +{order.coins} coins
+                    {order.status} · {order.payment_kind === 'vip' ? 'VIP' : `+${order.coins} coins`}
                   </strong>
                   <small>
                     ${Number(order.amount_usd).toFixed(2)} {order.currency} ·{' '}

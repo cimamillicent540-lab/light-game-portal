@@ -1,7 +1,8 @@
-import { isTestPaymentsEnabled, jsonResponse, requireAdminUser, type CoinPackage } from './_shared/paypal.mjs';
+import { getPaypalProduct, isTestPaymentsEnabled, jsonResponse, requireAdminUser } from './_shared/paypal.mjs';
 
 type SimulateRequest = {
   package_id?: string;
+  vip_plan_slug?: string;
 };
 
 const simulatedPaypalOrderId = (paymentOrderId: string) => `SIM-${paymentOrderId}`;
@@ -31,42 +32,37 @@ export default async (request: Request) => {
     }
 
     const body = (await request.json()) as SimulateRequest;
-    const packageId = body.package_id;
+    const product = await getPaypalProduct(supabase, body);
 
-    if (!packageId) {
-      return jsonResponse({ error: 'package_id is required' }, 400);
+    if (!body.package_id && !body.vip_plan_slug) {
+      return jsonResponse({ error: 'package_id or vip_plan_slug is required' }, 400);
     }
 
-    const { data: coinPackage, error: packageError } = await supabase
-      .from('coin_packages')
-      .select('id, name, price_usd, coins')
-      .eq('id', packageId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (packageError) throw packageError;
-    if (!coinPackage) {
-      return jsonResponse({ error: 'coin package not found' }, 404);
+    if (!product) {
+      return jsonResponse({ error: 'payment product not found' }, 404);
     }
 
-    const selectedPackage = coinPackage as CoinPackage;
     const { data: paymentOrder, error: orderError } = await supabase
       .from('payment_orders')
       .insert({
         user_id: user.id,
         provider: 'paypal',
-        package_id: selectedPackage.id,
-        amount_usd: selectedPackage.price_usd,
-        coins: selectedPackage.coins,
+        payment_kind: product.kind,
+        package_id: product.kind === 'coins' ? product.id : null,
+        vip_plan_id: product.kind === 'vip' ? product.id : null,
+        amount_usd: product.amount_usd,
+        coins: product.coins,
         currency: 'USD',
         status: 'pending',
         raw_response: {
           simulated: true,
-          package_id: selectedPackage.id,
+          payment_kind: product.kind,
+          product_id: product.id,
         },
         raw_payload: {
           simulated: true,
-          package_id: selectedPackage.id,
+          payment_kind: product.kind,
+          product_id: product.id,
         },
       })
       .select('id')
@@ -83,7 +79,7 @@ export default async (request: Request) => {
         {
           amount: {
             currency_code: 'USD',
-            value: Number(selectedPackage.price_usd).toFixed(2),
+            value: Number(product.amount_usd).toFixed(2),
           },
         },
       ],
@@ -98,7 +94,7 @@ export default async (request: Request) => {
 
     if (providerOrderUpdateError) throw providerOrderUpdateError;
 
-    const { data: finalizeResult, error: finalizeError } = await supabase.rpc('finalize_paypal_recharge', {
+    const { data: finalizeResult, error: finalizeError } = await supabase.rpc('finalize_paypal_order', {
       p_order_id: paymentOrder.id,
       p_provider_order_id: paypalOrderId,
       p_raw_response: rawResponse,

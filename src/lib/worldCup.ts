@@ -112,6 +112,9 @@ export type WorldCupEconomyStats = {
   coins_spent: number;
   profit: number;
   current_rank: number | null;
+  profit_rank: number | null;
+  coins_rank: number | null;
+  accuracy_rank: number | null;
   world_cup_avatar_frame: string | null;
   leaderboard_highlight_expires_at: string | null;
   is_highlighted: boolean;
@@ -194,7 +197,11 @@ export type WorldCupAdminAction =
 export const worldCupEventStart = new Date('2026-06-11T00:00:00Z');
 export const worldCupEventEnd = new Date('2026-07-22T23:59:59Z');
 
-export const getVipWorldCupMultiplier = (vipLevel?: string | null) => {
+export const getVipWorldCupMultiplier = (vipLevel?: string | null, vipExpiresAt?: string | null) => {
+  if (vipExpiresAt && new Date(vipExpiresAt).getTime() <= Date.now()) {
+    return 1;
+  }
+
   const level = vipLevel?.toLowerCase() ?? 'free';
   if (level === 'vip3' || level === 'yearly_vip') {
     return 2;
@@ -246,15 +253,48 @@ export const getWorldCupMatches = async () => {
     throw new Error('Supabase 环境变量尚未配置。');
   }
 
-  const { data, error } = await supabase.rpc('wc_get_recent_matches', {
-    p_limit: 50,
-  });
+  const { data: matchRows, error: matchError } = await supabase
+    .from('wc_matches')
+    .select('id, group_name, team_home, team_away, kickoff_time, status, home_score, away_score, winner')
+    .order('kickoff_time', { ascending: true });
 
-  if (error) {
-    throw error;
+  if (matchError) {
+    throw matchError;
   }
 
-  return (data ?? []) as WorldCupMatch[];
+  const matches = (matchRows ?? []) as Array<Omit<WorldCupMatch, 'market_slug' | 'market_status' | 'locks_at' | 'prediction_count'>>;
+  const matchIds = matches.map((match) => match.id);
+
+  const { data: marketRows, error: marketError } = matchIds.length
+    ? await supabase
+        .from('wc_markets')
+        .select('match_id, slug, status, locks_at')
+        .in('match_id', matchIds)
+        .eq('market_type', 'match')
+    : { data: [], error: null };
+
+  if (marketError) {
+    throw marketError;
+  }
+
+  const marketByMatchId = new Map(
+    (marketRows ?? []).map((market) => [
+      market.match_id as string,
+      {
+        market_slug: market.slug as string | null,
+        market_status: market.status as string | null,
+        locks_at: market.locks_at as string | null,
+      },
+    ]),
+  );
+
+  return matches.map((match) => ({
+    ...match,
+    market_slug: marketByMatchId.get(match.id)?.market_slug ?? null,
+    market_status: marketByMatchId.get(match.id)?.market_status ?? null,
+    locks_at: marketByMatchId.get(match.id)?.locks_at ?? null,
+    prediction_count: 0,
+  })) as WorldCupMatch[];
 };
 
 export const getTodayWorldCupMatches = async () => {
@@ -337,13 +377,17 @@ export const useWorldCupAiAssistant = async (market: {
   return data as { analysis: string; coins_spent: number; vip_free: boolean };
 };
 
-export const getWorldCupLeaderboard = async (period: 'today' | 'week' | 'all') => {
+export const getWorldCupLeaderboard = async (
+  period: 'today' | 'week' | 'all',
+  metric: 'profit' | 'coins' | 'accuracy' = 'profit',
+) => {
   if (!supabase) {
     throw new Error('Supabase 环境变量尚未配置。');
   }
 
   const { data, error } = await supabase.rpc('wc_get_leaderboard', {
     p_period: period,
+    p_metric: metric,
   });
 
   if (error) {

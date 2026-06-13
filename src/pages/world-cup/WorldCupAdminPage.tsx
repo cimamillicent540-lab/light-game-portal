@@ -65,6 +65,57 @@ const marketStatusLabel: Record<WorldCupAdminMarket['status'], string> = {
   cancelled: '已取消',
 };
 
+const stageFilters = [
+  '全部',
+  'Group A',
+  'Group B',
+  'Group C',
+  'Group D',
+  'Group E',
+  'Group F',
+  'Group G',
+  'Group H',
+  'Group I',
+  'Group J',
+  'Group K',
+  'Group L',
+  'Round of 32',
+  'Round of 16',
+  'Quarter-finals',
+  'Semi-finals',
+  'Third Place Match',
+  'Final',
+];
+
+const unitedStatesAliases = ['usa', 'us', 'u.s.', 'u.s', 'america'];
+
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/\bu\.?s\.?a?\.?\b/g, ' united states ')
+    .replace(/\bamerica\b/g, ' united states ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const teamAliases = (team: string) => (normalizeSearchText(team) === 'united states' ? unitedStatesAliases.join(' ') : '');
+
+const searchTokens = (value: string) =>
+  normalizeSearchText(value)
+    .split(/\s+/)
+    .filter((token) => token && token !== 'vs' && token !== 'v' && token !== 'versus');
+
+const matchSearchText = (match: WorldCupAdminMatch) =>
+  normalizeSearchText(
+    [
+      match.group_name,
+      match.team_home,
+      match.team_away,
+      `${match.team_home} vs ${match.team_away}`,
+      teamAliases(match.team_home),
+      teamAliases(match.team_away),
+    ].join(' '),
+  );
+
 const parseCsvLine = (line: string) => {
   const cells: string[] = [];
   let current = '';
@@ -198,6 +249,8 @@ export function WorldCupAdminPage() {
   const [csvText, setCsvText] = useState('group_name,team_home,team_away,kickoff_time\nGroup A,Brazil,Morocco,2026-06-12T20:00:00Z');
   const [scoreCsvText, setScoreCsvText] = useState('id,home_score,away_score');
   const [settleOptions, setSettleOptions] = useState<Record<string, string>>({});
+  const [matchSearchQuery, setMatchSearchQuery] = useState('');
+  const [matchStageFilter, setMatchStageFilter] = useState('全部');
   const [isLoading, setIsLoading] = useState(true);
   const [isWorking, setIsWorking] = useState(false);
   const [message, setMessage] = useState('');
@@ -250,6 +303,22 @@ export function WorldCupAdminPage() {
     () => [...(dashboard?.markets ?? [])].sort((a, b) => b.prediction_count - a.prediction_count).slice(0, 12),
     [dashboard?.markets],
   );
+  const filteredAdminMatches = useMemo(() => {
+    const tokens = searchTokens(matchSearchQuery);
+    return [...(dashboard?.matches ?? [])]
+      .filter((match) => matchStageFilter === '全部' || match.group_name === matchStageFilter)
+      .filter((match) => {
+        if (!tokens.length) return true;
+        const searchable = matchSearchText(match);
+        return tokens.every((token) => searchable.includes(token));
+      })
+      .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime());
+  }, [dashboard?.matches, matchSearchQuery, matchStageFilter]);
+
+  const clearMatchSearchAndFilter = () => {
+    setMatchSearchQuery('');
+    setMatchStageFilter('全部');
+  };
 
   const runAction = async (successText: string, action: Parameters<typeof runWorldCupAdminAction>[0], payload: Record<string, unknown>) => {
     setIsWorking(true);
@@ -500,8 +569,38 @@ export function WorldCupAdminPage() {
           <section className="leaderboard-panel">
             <div className="section-heading compact">
               <h2>赛程与比分管理</h2>
-              <span>保存比分后自动计算 winner 并开奖</span>
+              <span>显示 {filteredAdminMatches.length} / {dashboard.matches.length} 场 · 按开赛时间升序</span>
             </div>
+            <label className="admin-field">
+              <span>搜索赛程</span>
+              <input
+                placeholder="Group D / USA / Paraguay / USA vs Paraguay"
+                value={matchSearchQuery}
+                onChange={(event) => setMatchSearchQuery(event.target.value)}
+              />
+            </label>
+            <div className="filter-bar match-filter-bar">
+              {stageFilters.map((stage) => (
+                <button
+                  className={`nav-button ${matchStageFilter === stage ? 'strong' : ''}`}
+                  key={stage}
+                  type="button"
+                  onClick={() => setMatchStageFilter(stage)}
+                >
+                  {stage}
+                </button>
+              ))}
+            </div>
+            <button className="ghost-button compact-button" type="button" onClick={clearMatchSearchAndFilter}>
+              清除搜索和筛选
+            </button>
+            {!filteredAdminMatches.length ? (
+              <div className="empty-search-panel">
+                <h3>没有找到匹配比赛</h3>
+                <p>当前搜索词：{matchSearchQuery.trim() || '无'}</p>
+                <p>当前筛选：{matchStageFilter}</p>
+              </div>
+            ) : null}
             <div className="admin-table match-admin-table">
               <div className="admin-table-row admin-table-head">
                 <span>比赛</span>
@@ -510,7 +609,7 @@ export function WorldCupAdminPage() {
                 <span>比分</span>
                 <span>操作</span>
               </div>
-              {dashboard.matches.map((match) => (
+              {filteredAdminMatches.map((match) => (
                 <div className="admin-table-row" key={match.id}>
                   <div>
                     <strong>{match.team_home} vs {match.team_away}</strong>
@@ -562,6 +661,7 @@ export function WorldCupAdminPage() {
                   </div>
                 </div>
               ))}
+              {!filteredAdminMatches.length ? <p className="empty-state">没有匹配的比赛。</p> : null}
             </div>
           </section>
 

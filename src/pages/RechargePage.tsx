@@ -6,9 +6,12 @@ import {
   createPayPalOrder,
   getCoinPackages,
   getPayPalSimulationStatus,
+  getVipPlans,
   paypalClientId,
   simulatePayPalSuccess,
   type CoinPackage,
+  type PaymentProductSelection,
+  type VipPlan,
 } from '../lib/recharge';
 
 declare global {
@@ -65,7 +68,10 @@ const loadPayPalSdk = () =>
 
 export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
   const [packages, setPackages] = useState<CoinPackage[]>([]);
+  const [vipPlans, setVipPlans] = useState<VipPlan[]>([]);
+  const [selectedMode, setSelectedMode] = useState<'coins' | 'vip'>('coins');
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [selectedVipPlanSlug, setSelectedVipPlanSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isPayPalReady, setIsPayPalReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -77,12 +83,37 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
     () => packages.find((coinPackage) => coinPackage.id === selectedPackageId) ?? null,
     [packages, selectedPackageId],
   );
+  const selectedVipPlan = useMemo(
+    () => vipPlans.find((plan) => plan.slug === selectedVipPlanSlug) ?? null,
+    [selectedVipPlanSlug, vipPlans],
+  );
+  const selectedPayment = useMemo<PaymentProductSelection | null>(() => {
+    if (selectedMode === 'vip') {
+      return selectedVipPlanSlug ? { kind: 'vip', vipPlanSlug: selectedVipPlanSlug } : null;
+    }
+
+    return selectedPackageId ? { kind: 'coins', packageId: selectedPackageId } : null;
+  }, [selectedMode, selectedPackageId, selectedVipPlanSlug]);
+  const selectedLabel =
+    selectedMode === 'vip' && selectedVipPlan
+      ? `${selectedVipPlan.name} · ${selectedVipPlan.duration_days} 天 · ${selectedVipPlan.reward_multiplier}x 奖励`
+      : selectedPackage
+        ? `${selectedPackage.name} · ${selectedPackage.coins} 金币`
+        : '请选择套餐';
+  const selectedPrice =
+    selectedMode === 'vip' && selectedVipPlan
+      ? Number(selectedVipPlan.price_usd)
+      : selectedPackage
+        ? Number(selectedPackage.price_usd)
+        : 0;
 
   useEffect(() => {
-    getCoinPackages()
-      .then((data) => {
-        setPackages(data);
-        setSelectedPackageId(data[0]?.id ?? '');
+    Promise.all([getCoinPackages(), getVipPlans()])
+      .then(([coinPackages, plans]) => {
+        setPackages(coinPackages);
+        setVipPlans(plans);
+        setSelectedPackageId(coinPackages[0]?.id ?? '');
+        setSelectedVipPlanSlug(plans[0]?.slug ?? '');
         setIsLoading(false);
       })
       .catch((error: Error) => {
@@ -104,7 +135,7 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
   }, []);
 
   useEffect(() => {
-    if (!isPayPalReady || !window.paypal || !buttonsRef.current || !selectedPackageId) {
+    if (!isPayPalReady || !window.paypal || !buttonsRef.current || !selectedPayment) {
       return undefined;
     }
 
@@ -114,14 +145,18 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
         setMessage('');
         setErrorMessage('');
         setIsProcessing(true);
-        const order = await createPayPalOrder(selectedPackageId);
+        const order = await createPayPalOrder(selectedPayment);
         return order.paypal_order_id;
       },
       onApprove: async (data) => {
         try {
           const result = await capturePayPalOrder(data.orderID);
           await onRefresh();
-          setMessage(`Payment successful\n+${result.coins} coins`);
+          setMessage(
+            result.payment_kind === 'vip'
+              ? `Payment successful\nVIP activated${result.vip?.expires_at ? ` until ${new Date(result.vip.expires_at).toLocaleDateString()}` : ''}`
+              : `Payment successful\n+${result.coins} coins`,
+          );
         } catch (error) {
           setErrorMessage(error instanceof Error ? error.message : 'PayPal capture failed');
         } finally {
@@ -144,10 +179,10 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
       buttonsRef.current?.replaceChildren();
       void buttons.close?.();
     };
-  }, [isPayPalReady, onRefresh, selectedPackageId]);
+  }, [isPayPalReady, onRefresh, selectedPayment]);
 
   const handleSimulatePayment = async () => {
-    if (!selectedPackageId || isProcessing) {
+    if (!selectedPayment || isProcessing) {
       return;
     }
 
@@ -156,9 +191,13 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
     setErrorMessage('');
 
     try {
-      const result = await simulatePayPalSuccess(selectedPackageId);
+      const result = await simulatePayPalSuccess(selectedPayment);
       await onRefresh();
-      setMessage(`Payment successful\n+${result.coins} coins`);
+      setMessage(
+        result.payment_kind === 'vip'
+          ? `Payment successful\nVIP activated${result.vip?.expires_at ? ` until ${new Date(result.vip.expires_at).toLocaleDateString()}` : ''}`
+          : `Payment successful\n+${result.coins} coins`,
+      );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'PayPal simulation failed');
     } finally {
@@ -171,7 +210,7 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
       <div className="page-heading">
         <p className="eyebrow">Recharge</p>
         <h1>金币充值</h1>
-        <p>使用 PayPal Sandbox 完成支付。付款成功后金币由服务端自动到账，前端不会直接修改钱包余额。</p>
+        <p>使用 PayPal Sandbox 完成金币充值或 VIP 订阅。付款成功后由服务端发放金币或开通会员。</p>
       </div>
 
       <section className="leaderboard-panel recharge-panel">
@@ -194,31 +233,62 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
           <h2>选择套餐</h2>
           <span>USD · PayPal</span>
         </div>
+        <div className="filter-bar compact-filter">
+          <button
+            className={`nav-button ${selectedMode === 'coins' ? 'strong' : ''}`}
+            type="button"
+            onClick={() => setSelectedMode('coins')}
+          >
+            金币充值
+          </button>
+          <button
+            className={`nav-button ${selectedMode === 'vip' ? 'strong' : ''}`}
+            type="button"
+            onClick={() => setSelectedMode('vip')}
+          >
+            VIP订阅
+          </button>
+        </div>
         <div className="market-grid">
-          {packages.map((coinPackage) => (
-            <button
-              className={`recharge-package ${selectedPackageId === coinPackage.id ? 'selected' : ''}`}
-              key={coinPackage.id}
-              type="button"
-              onClick={() => setSelectedPackageId(coinPackage.id)}
-            >
-              <span>{coinPackage.name}</span>
-              <strong>{coinPackage.coins} coins</strong>
-              <small>${Number(coinPackage.price_usd).toFixed(2)}</small>
-            </button>
-          ))}
+          {selectedMode === 'coins'
+            ? packages.map((coinPackage) => (
+                <button
+                  className={`recharge-package ${selectedPackageId === coinPackage.id ? 'selected' : ''}`}
+                  key={coinPackage.id}
+                  type="button"
+                  onClick={() => setSelectedPackageId(coinPackage.id)}
+                >
+                  <span>{coinPackage.name}</span>
+                  <strong>{coinPackage.coins} coins</strong>
+                  <small>${Number(coinPackage.price_usd).toFixed(2)}</small>
+                </button>
+              ))
+            : vipPlans.map((plan) => (
+                <button
+                  className={`recharge-package vip-package ${selectedVipPlanSlug === plan.slug ? 'selected' : ''}`}
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setSelectedVipPlanSlug(plan.slug)}
+                >
+                  <span>{plan.name}</span>
+                  <strong>{plan.duration_days} days</strong>
+                  <small>
+                    ${Number(plan.price_usd).toFixed(2)} · {plan.reward_multiplier}x rewards
+                  </small>
+                </button>
+              ))}
         </div>
       </section>
 
       <section className="leaderboard-panel">
         <div className="section-heading compact">
           <h2>PayPal Checkout</h2>
-          <span>{selectedPackage ? `+${selectedPackage.coins} coins` : '请选择套餐'}</span>
+          <span>{selectedMode === 'vip' ? 'VIP Subscription' : selectedPackage ? `+${selectedPackage.coins} coins` : '请选择套餐'}</span>
         </div>
         {!paypalClientId ? <p className="form-message error">请先配置 VITE_PAYPAL_CLIENT_ID。</p> : null}
-        {selectedPackage ? (
+        {selectedPayment ? (
           <p className="profile-note">
-            当前选择：{selectedPackage.name} · ${Number(selectedPackage.price_usd).toFixed(2)} · {selectedPackage.coins} 金币
+            当前选择：{selectedLabel} · ${selectedPrice.toFixed(2)}
           </p>
         ) : null}
         <div className={isProcessing ? 'paypal-buttons processing' : 'paypal-buttons'} ref={buttonsRef} />
@@ -226,7 +296,7 @@ export function RechargePage({ user, wallet, onRefresh }: RechargePageProps) {
           <button
             className="ghost-button compact-button simulate-payment-button"
             type="button"
-            disabled={isProcessing || !selectedPackageId}
+            disabled={isProcessing || !selectedPayment}
             onClick={handleSimulatePayment}
           >
             模拟支付成功
